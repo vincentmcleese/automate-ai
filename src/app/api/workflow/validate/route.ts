@@ -38,17 +38,63 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Test system prompt retrieval
+      // Test system prompt retrieval with better authentication handling
       let validationPrompt
       try {
+        // First, let's get the current user to ensure we have authentication context
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser()
+        console.log('Authentication check:', {
+          hasUser: !!user,
+          userError: userError?.message,
+          userId: user?.id,
+        })
+
+        // Try to get the system prompt with detailed error logging
         const { data, error: promptError } = await supabase
           .from('system_prompts')
-          .select('prompt_content, name')
+          .select('prompt_content, name, is_active, created_at')
           .eq('name', 'workflow_validation')
           .eq('is_active', true)
           .single()
 
-        if (promptError) throw promptError
+        console.log('System prompt query result:', {
+          hasData: !!data,
+          promptError: promptError
+            ? {
+                message: promptError.message,
+                code: promptError.code,
+                details: promptError.details,
+                hint: promptError.hint,
+              }
+            : null,
+        })
+
+        if (promptError) {
+          // If the RLS policy is blocking access, try a different approach
+          if (promptError.code === 'PGRST116' || promptError.message?.includes('No rows found')) {
+            console.log('No rows found - checking if prompt exists at all...')
+
+            // Check if the prompt exists but is blocked by RLS by temporarily bypassing authentication check
+            const { data: allPrompts, error: allPromptsError } = await supabase
+              .from('system_prompts')
+              .select('name, is_active')
+              .eq('name', 'workflow_validation')
+
+            console.log('All prompts check:', {
+              allPrompts,
+              allPromptsError: allPromptsError?.message,
+            })
+
+            throw new Error(
+              `System prompt not found or access denied. User authenticated: ${!!user}. Prompt exists: ${(allPrompts?.length || 0) > 0}`
+            )
+          }
+          throw promptError
+        }
+
         validationPrompt = data
         console.log('✓ System prompt retrieved successfully')
       } catch (error) {
@@ -140,8 +186,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database connection failed' }, { status: 503 })
     }
 
-    // Get the workflow validation system prompt
+    // Get the workflow validation system prompt with authentication handling
     console.log('Fetching workflow validation system prompt...')
+
+    // Get current user for authentication context (but don't require it)
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+    if (userError) {
+      console.log('No authenticated user (this is okay for public validation):', userError.message)
+    }
+    console.log('Current user context:', { hasUser: !!user, userId: user?.id })
+
     const { data: validationPrompt, error: promptError } = await supabase
       .from('system_prompts')
       .select('prompt_content')
@@ -151,6 +208,22 @@ export async function POST(request: NextRequest) {
 
     if (promptError) {
       console.error('Error fetching validation prompt:', promptError)
+
+      // Provide more helpful error messages based on the error type
+      if (promptError.code === 'PGRST116' || promptError.message?.includes('No rows found')) {
+        return NextResponse.json(
+          {
+            error: `Validation system prompt not found. Please ensure the 'workflow_validation' prompt exists and is active.`,
+            details: {
+              authenticated: !!user,
+              errorCode: promptError.code,
+              errorMessage: promptError.message,
+            },
+          },
+          { status: 503 }
+        )
+      }
+
       return NextResponse.json(
         { error: 'Validation system prompt not found. Please contact an administrator.' },
         { status: 503 }

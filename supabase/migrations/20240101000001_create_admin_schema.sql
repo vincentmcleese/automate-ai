@@ -145,6 +145,10 @@ ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Authenticated users can read active prompts" ON system_prompts
     FOR SELECT USING (auth.role() = 'authenticated' AND is_active = true);
 
+-- Allow public access to the workflow_validation prompt for the debug endpoint
+CREATE POLICY "Public can read workflow validation prompt" ON system_prompts
+    FOR SELECT USING (name = 'workflow_validation' AND is_active = true);
+
 CREATE POLICY "Admins can manage all prompts" ON system_prompts
     FOR ALL USING (
         (auth.jwt() ->> 'app_metadata')::jsonb ->> 'role' = 'admin'
