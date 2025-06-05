@@ -12,9 +12,28 @@ export class OpenRouterClient {
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.NEXT_OPENROUTER_API_KEY || ''
+    console.log('OpenRouter client constructor - API key provided:', !!apiKey)
+    console.log(
+      'OpenRouter client constructor - Env API key exists:',
+      !!process.env.NEXT_OPENROUTER_API_KEY
+    )
+    console.log('OpenRouter client constructor - Final API key exists:', !!this.apiKey)
+    console.log(
+      'OpenRouter client constructor - API key starts with:',
+      this.apiKey?.substring(0, 10) + '...'
+    )
+    console.log('OpenRouter client constructor - API key length:', this.apiKey?.length)
+    console.log(
+      'OpenRouter client constructor - API key has whitespace:',
+      /\s/.test(this.apiKey || '')
+    )
+
     if (!this.apiKey) {
       throw new Error('OpenRouter API key is required')
     }
+
+    // Trim any potential whitespace
+    this.apiKey = this.apiKey.trim()
 
     this.defaultHeaders = {
       Authorization: `Bearer ${this.apiKey}`,
@@ -22,6 +41,12 @@ export class OpenRouterClient {
       'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://automate.ghostteam.ai',
       'X-Title': 'AutomateAI',
     }
+
+    console.log(
+      'OpenRouter client constructor - Authorization header set:',
+      this.defaultHeaders.Authorization?.substring(0, 20) + '...'
+    )
+    console.log('OpenRouter client constructor - Trimmed API key length:', this.apiKey.length)
   }
 
   /**
@@ -29,20 +54,30 @@ export class OpenRouterClient {
    */
   async chatCompletion(request: OpenRouterChatRequest): Promise<OpenRouterChatResponse> {
     try {
+      console.log('Making OpenRouter API call...')
+      console.log('Headers being sent:', {
+        ...this.defaultHeaders,
+        Authorization: this.defaultHeaders.Authorization?.substring(0, 20) + '...',
+      })
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: this.defaultHeaders,
         body: JSON.stringify(request),
       })
 
+      console.log('OpenRouter API response status:', response.status)
+
       if (!response.ok) {
         const errorData: OpenRouterError = await response.json()
+        console.log('OpenRouter API error response:', errorData)
         throw new Error(`OpenRouter API error: ${errorData.error.message}`)
       }
 
       const data: OpenRouterChatResponse = await response.json()
       return data
     } catch (error) {
+      console.error('Error in chatCompletion:', error)
       if (error instanceof Error) {
         throw error
       }
@@ -211,5 +246,54 @@ export class OpenRouterClient {
   }
 }
 
-// Export a default instance
-export const openRouterClient = new OpenRouterClient()
+// Lazy initialization to avoid throwing errors at module load time
+let _openRouterClient: OpenRouterClient | null = null
+
+/**
+ * Get or create the OpenRouter client instance
+ */
+export function getOpenRouterClient(): OpenRouterClient {
+  console.log('getOpenRouterClient called - existing client:', !!_openRouterClient)
+  if (!_openRouterClient) {
+    console.log('Creating new OpenRouter client instance...')
+    _openRouterClient = new OpenRouterClient()
+  }
+  return _openRouterClient
+}
+
+// Export the factory function as the default client
+export const openRouterClient = {
+  async validateWorkflow(
+    workflowDescription: string,
+    systemPrompt: string,
+    model: string = 'openai/gpt-4o-mini'
+  ): Promise<any> {
+    const client = getOpenRouterClient()
+    return client.validateWorkflow(workflowDescription, systemPrompt, model)
+  },
+
+  async generateWorkflowJSON(
+    workflowDescription: string,
+    validationResults: any,
+    systemPrompt: string,
+    model: string = 'openai/gpt-4o-mini'
+  ): Promise<any> {
+    const client = getOpenRouterClient()
+    return client.generateWorkflowJSON(workflowDescription, validationResults, systemPrompt, model)
+  },
+
+  async getAvailableModels(): Promise<any[]> {
+    const client = getOpenRouterClient()
+    return client.getAvailableModels()
+  },
+
+  async testModel(modelId: string): Promise<boolean> {
+    const client = getOpenRouterClient()
+    return client.testModel(modelId)
+  },
+
+  async getCredits(): Promise<any> {
+    const client = getOpenRouterClient()
+    return client.getCredits()
+  },
+}
