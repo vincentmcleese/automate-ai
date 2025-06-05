@@ -5,8 +5,6 @@ import { WorkflowValidationResult } from '@/types/admin'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Workflow validation request received')
-
     // Parse request body
     let requestBody
     try {
@@ -17,7 +15,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { workflow_description } = requestBody
-    console.log('Workflow description length:', workflow_description?.length || 0)
 
     if (!workflow_description || workflow_description.trim().length === 0) {
       return NextResponse.json({ error: 'Workflow description is required' }, { status: 400 })
@@ -34,14 +31,12 @@ export async function POST(request: NextRequest) {
     let supabase
     try {
       supabase = await createClient()
-      console.log('Supabase client created successfully')
     } catch (error) {
       console.error('Failed to create Supabase client:', error)
       return NextResponse.json({ error: 'Database connection failed' }, { status: 503 })
     }
 
     // Get the workflow validation system prompt
-    console.log('Fetching system prompt...')
     const { data: validationPrompt, error: promptError } = await supabase
       .from('system_prompts')
       .select('prompt_content')
@@ -65,8 +60,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('System prompt found, length:', validationPrompt.prompt_content.length)
-
     // Replace the template variable in the prompt
     const systemPrompt = validationPrompt.prompt_content.replace(
       /\{\{workflow_description\}\}/g,
@@ -74,7 +67,6 @@ export async function POST(request: NextRequest) {
     )
 
     // Get the default model for processing
-    console.log('Fetching default model setting...')
     const { data: defaultModelSetting } = await supabase
       .from('admin_settings')
       .select('value')
@@ -93,8 +85,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('Using model:', defaultModel)
-
     // Check if OpenRouter client is available
     if (!process.env.NEXT_OPENROUTER_API_KEY) {
       console.error('OpenRouter API key not configured')
@@ -104,14 +94,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('OpenRouter API key is configured:', !!process.env.NEXT_OPENROUTER_API_KEY)
-    console.log(
-      'API key starts with:',
-      process.env.NEXT_OPENROUTER_API_KEY?.substring(0, 10) + '...'
-    )
-
     // Call OpenRouter to validate the workflow
-    console.log('Calling OpenRouter for validation...')
     let validationResult: WorkflowValidationResult
 
     try {
@@ -120,7 +103,6 @@ export async function POST(request: NextRequest) {
         systemPrompt,
         defaultModel
       )
-      console.log('OpenRouter validation completed successfully')
     } catch (error) {
       console.error('OpenRouter validation failed:', error)
 
@@ -148,7 +130,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Returning validation result')
     return NextResponse.json({
       validation: validationResult,
       model_used: defaultModel,

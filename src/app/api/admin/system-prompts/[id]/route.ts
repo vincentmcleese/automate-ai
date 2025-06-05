@@ -44,8 +44,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// PUT /api/admin/system-prompts/[id] - Update system prompt
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// PATCH /api/admin/system-prompts/[id] - Update system prompt (with versioning)
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
     const {
@@ -62,11 +62,26 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const { id } = await params
-
     const body = await request.json()
+
+    // Check if prompt exists and get current data
+    const { data: existingPrompt, error: fetchError } = await supabase
+      .from('system_prompts')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'System prompt not found' }, { status: 404 })
+      }
+      console.error('Error fetching system prompt:', fetchError)
+      return NextResponse.json({ error: 'Failed to fetch system prompt' }, { status: 500 })
+    }
+
+    // Build update data - only include provided fields
     const updateData: Partial<UpdateSystemPromptData> = {}
 
-    // Only include fields that are provided
     if (body.name !== undefined) updateData.name = body.name
     if (body.description !== undefined) updateData.description = body.description
     if (body.category !== undefined) updateData.category = body.category
@@ -76,9 +91,41 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.variables !== undefined) updateData.variables = body.variables
     if (body.is_active !== undefined) updateData.is_active = body.is_active
 
-    // Validate the data if any validation-required fields are being updated
-    if (body.name || body.prompt_content || body.category) {
-      const validationErrors = validateSystemPromptData({ ...body, id })
+    // If this is a significant update (content or name change), create a version backup
+    const shouldCreateVersion = updateData.name || updateData.prompt_content || updateData.category
+
+    if (shouldCreateVersion && existingPrompt.version) {
+      // Create a version backup before updating
+      await supabase.from('system_prompt_versions').insert({
+        original_prompt_id: existingPrompt.id,
+        version_number: existingPrompt.version,
+        name: existingPrompt.name,
+        description: existingPrompt.description,
+        category: existingPrompt.category,
+        prompt_content: existingPrompt.prompt_content,
+        variables: existingPrompt.variables,
+        is_active: existingPrompt.is_active,
+        created_by: existingPrompt.created_by,
+        original_created_at: existingPrompt.created_at,
+        original_updated_at: existingPrompt.updated_at,
+      })
+
+      // Increment version number
+      updateData.version = (existingPrompt.version || 1) + 1
+    }
+
+    // Validate the data if we're updating core fields
+    if (updateData.name || updateData.prompt_content) {
+      const validationErrors = validateSystemPromptData({
+        name: updateData.name || existingPrompt.name,
+        description: updateData.description || existingPrompt.description,
+        category: updateData.category || existingPrompt.category,
+        prompt_content: updateData.prompt_content || existingPrompt.prompt_content,
+        variables: updateData.variables || existingPrompt.variables,
+        is_active:
+          updateData.is_active !== undefined ? updateData.is_active : existingPrompt.is_active,
+      })
+
       if (validationErrors.length > 0) {
         return NextResponse.json(
           { error: 'Validation failed', details: validationErrors },
@@ -87,16 +134,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
-    // Check for duplicate names (if name is being updated)
-    if (body.name) {
-      const { data: existing } = await supabase
+    // Check for duplicate names if name is being updated
+    if (updateData.name && updateData.name !== existingPrompt.name) {
+      const { data: duplicate } = await supabase
         .from('system_prompts')
         .select('id')
-        .eq('name', body.name)
+        .eq('name', updateData.name)
         .neq('id', id)
         .single()
 
-      if (existing) {
+      if (duplicate) {
         return NextResponse.json(
           { error: 'A system prompt with this name already exists' },
           { status: 409 }
@@ -105,22 +152,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Update the prompt
-    const { data: updatedPrompt, error } = await supabase
+    const { data: updatedPrompt, error: updateError } = await supabase
       .from('system_prompts')
       .update(updateData)
       .eq('id', id)
       .select()
       .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return NextResponse.json({ error: 'System prompt not found' }, { status: 404 })
-      }
-      console.error('Error updating system prompt:', error)
+    if (updateError) {
+      console.error('Error updating system prompt:', updateError)
       return NextResponse.json({ error: 'Failed to update system prompt' }, { status: 500 })
     }
 
-    return NextResponse.json({ prompt: updatedPrompt })
+    return NextResponse.json({
+      prompt: updatedPrompt,
+      version_created: shouldCreateVersion,
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Access denied'
     const status = message.includes('required') ? 401 : 403
@@ -150,10 +197,10 @@ export async function DELETE(
 
     const { id } = await params
 
-    // Check if the prompt exists
-    const { data: existing, error: fetchError } = await supabase
+    // Check if prompt exists
+    const { data: existingPrompt, error: fetchError } = await supabase
       .from('system_prompts')
-      .select('name')
+      .select('id, name')
       .eq('id', id)
       .single()
 
@@ -161,21 +208,21 @@ export async function DELETE(
       if (fetchError.code === 'PGRST116') {
         return NextResponse.json({ error: 'System prompt not found' }, { status: 404 })
       }
-      console.error('Error checking system prompt:', fetchError)
-      return NextResponse.json({ error: 'Failed to delete system prompt' }, { status: 500 })
+      console.error('Error fetching system prompt:', fetchError)
+      return NextResponse.json({ error: 'Failed to fetch system prompt' }, { status: 500 })
     }
 
-    // Delete the prompt
-    const { error } = await supabase.from('system_prompts').delete().eq('id', id)
+    // Delete the prompt (this will also cascade delete versions if configured)
+    const { error: deleteError } = await supabase.from('system_prompts').delete().eq('id', id)
 
-    if (error) {
-      console.error('Error deleting system prompt:', error)
+    if (deleteError) {
+      console.error('Error deleting system prompt:', deleteError)
       return NextResponse.json({ error: 'Failed to delete system prompt' }, { status: 500 })
     }
 
     return NextResponse.json({
       message: 'System prompt deleted successfully',
-      deleted_prompt: existing.name,
+      deleted_prompt: existingPrompt,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Access denied'

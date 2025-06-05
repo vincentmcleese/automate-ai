@@ -8,9 +8,26 @@ export interface SystemPrompt {
   prompt_content: string
   variables: Record<string, unknown>
   is_active: boolean
+  version: number
   created_by?: string
   created_at: string
   updated_at: string
+}
+
+export interface SystemPromptVersion {
+  id: string
+  original_prompt_id: string
+  version_number: number
+  name: string
+  description?: string
+  category: PromptCategory
+  prompt_content: string
+  variables: Record<string, unknown>
+  is_active: boolean
+  created_by?: string
+  original_created_at: string
+  original_updated_at: string
+  archived_at: string
 }
 
 export interface OpenRouterModel {
@@ -47,6 +64,7 @@ export interface CreateSystemPromptData {
 
 export interface UpdateSystemPromptData extends Partial<CreateSystemPromptData> {
   id: string
+  version?: number
 }
 
 export interface CreateOpenRouterModelData {

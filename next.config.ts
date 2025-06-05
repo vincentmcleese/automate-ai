@@ -1,11 +1,11 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
-  
+
   // Security headers
   async headers() {
     return [
@@ -29,17 +29,22 @@ const nextConfig: NextConfig = {
     ]
   },
 
-  // Bundle analyzer (enable with ANALYZE=true)
-  ...(process.env.ANALYZE === 'true' && {
-    webpack: (config: any) => {
-      config.plugins.push(
-        new (require('@next/bundle-analyzer')({
-          enabled: true,
-        }))()
-      )
-      return config
-    },
-  }),
-};
+  // Webpack configuration
+  webpack: (config: { module: { exprContextCritical: boolean }; plugins: unknown[] }) => {
+    // Suppress critical dependency warnings from Supabase realtime
+    config.module.exprContextCritical = false
 
-export default nextConfig;
+    // Bundle analyzer (enable with ANALYZE=true)
+    if (process.env.ANALYZE === 'true') {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const withBundleAnalyzer = require('@next/bundle-analyzer')({
+        enabled: true,
+      })
+      return withBundleAnalyzer(config)
+    }
+
+    return config
+  },
+}
+
+export default nextConfig

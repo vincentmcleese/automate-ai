@@ -1,15 +1,40 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Settings, MessageSquare, Cpu, Users, RefreshCw, DollarSign } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Settings,
+  MessageSquare,
+  Cpu,
+  Users,
+  RefreshCw,
+  DollarSign,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { SystemPrompt, PromptCategory } from '@/types/admin'
 
 export default function AdminPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [systemPromptsLoading, setSystemPromptsLoading] = useState(false)
+  const [systemPrompts, setSystemPrompts] = useState<SystemPrompt[]>([])
   const [stats, setStats] = useState({
     prompts: 0,
     models: 0,
@@ -59,9 +84,29 @@ export default function AdminPage() {
     }
   }, [])
 
+  const loadSystemPrompts = useCallback(async () => {
+    try {
+      setSystemPromptsLoading(true)
+      const response = await fetch('/api/admin/system-prompts')
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch system prompts')
+      }
+
+      const data = await response.json()
+      setSystemPrompts(data.prompts || [])
+    } catch (error) {
+      console.error('Error loading system prompts:', error)
+      toast.error('Failed to load system prompts')
+    } finally {
+      setSystemPromptsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     loadStats()
-  }, [loadStats])
+    loadSystemPrompts()
+  }, [loadStats, loadSystemPrompts])
 
   const syncModels = async () => {
     try {
@@ -78,6 +123,80 @@ export default function AdminPage() {
       console.error('Error syncing models:', error)
       toast.error('Failed to sync models')
     }
+  }
+
+  const togglePromptStatus = async (promptId: string, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/system-prompts/${promptId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          is_active: !currentStatus,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update prompt status')
+      }
+
+      toast.success(`Prompt ${!currentStatus ? 'activated' : 'deactivated'}`)
+      loadSystemPrompts() // Refresh the list
+    } catch (error) {
+      console.error('Error toggling prompt status:', error)
+      toast.error('Failed to update prompt status')
+    }
+  }
+
+  const deletePrompt = async (promptId: string, promptName: string) => {
+    if (
+      !confirm(`Are you sure you want to delete "${promptName}"? This action cannot be undone.`)
+    ) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/admin/system-prompts/${promptId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete prompt')
+      }
+
+      toast.success('System prompt deleted successfully')
+      loadSystemPrompts() // Refresh the list
+      loadStats() // Refresh stats
+    } catch (error) {
+      console.error('Error deleting prompt:', error)
+      toast.error('Failed to delete prompt')
+    }
+  }
+
+  const getCategoryBadgeColor = (category: PromptCategory) => {
+    switch (category) {
+      case 'validation':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'json_generation':
+        return 'bg-green-100 text-green-800 border-green-200'
+      case 'workflow_analysis':
+        return 'bg-purple-100 text-purple-800 border-purple-200'
+      case 'custom':
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
 
   return (
@@ -194,15 +313,126 @@ export default function AdminPage() {
             <TabsContent value="prompts" className="space-y-4">
               <Card className="border-[#e5e7eb]">
                 <CardHeader>
-                  <CardTitle>System Prompts</CardTitle>
-                  <CardDescription>
-                    Manage AI system prompts for workflow validation and JSON generation
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>System Prompts</CardTitle>
+                      <CardDescription>
+                        Manage AI system prompts for workflow validation and JSON generation
+                      </CardDescription>
+                    </div>
+                    <Button className="bg-[#32da94] text-white hover:bg-[#2bc780]">
+                      <Plus className="mr-2 h-4 w-4" />
+                      New Prompt
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-[#6b7280]">
-                    System prompts management will be available here.
-                  </p>
+                  {systemPromptsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-6 w-6 animate-spin text-[#32da94]" />
+                      <span className="ml-2 text-[#6b7280]">Loading system prompts...</span>
+                    </div>
+                  ) : systemPrompts.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <MessageSquare className="mx-auto mb-4 h-12 w-12 text-[#6b7280]" />
+                      <p className="text-[#6b7280]">No system prompts found</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-[#e5e7eb]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Version</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Created</TableHead>
+                            <TableHead>Updated</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {systemPrompts.map(prompt => (
+                            <TableRow key={prompt.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium text-[#000000]">{prompt.name}</p>
+                                  {prompt.description && (
+                                    <p className="max-w-xs truncate text-sm text-[#6b7280]">
+                                      {prompt.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={getCategoryBadgeColor(prompt.category)}
+                                >
+                                  {prompt.category.replace('_', ' ')}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                                  v{prompt.version}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={prompt.is_active ? 'default' : 'secondary'}
+                                  className={
+                                    prompt.is_active
+                                      ? 'border-green-200 bg-green-100 text-green-800'
+                                      : 'border-gray-200 bg-gray-100 text-gray-800'
+                                  }
+                                >
+                                  {prompt.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm text-[#6b7280]">
+                                {formatDate(prompt.created_at)}
+                              </TableCell>
+                              <TableCell className="text-sm text-[#6b7280]">
+                                {formatDate(prompt.updated_at)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => togglePromptStatus(prompt.id, prompt.is_active)}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    {prompt.is_active ? (
+                                      <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => router.push(`/admin/system-prompt/${prompt.id}`)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                    onClick={() => deletePrompt(prompt.id, prompt.name)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
