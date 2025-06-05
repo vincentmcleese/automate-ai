@@ -7,6 +7,7 @@ export interface SystemPrompt {
   category: PromptCategory
   prompt_content: string
   variables: Record<string, any>
+  model_id?: string // OpenRouter model ID to use for this prompt
   is_active: boolean
   version: number
   created_by?: string
@@ -59,6 +60,7 @@ export interface CreateSystemPromptData {
   category: PromptCategory
   prompt_content: string
   variables?: Record<string, unknown>
+  model_id?: string
   is_active?: boolean
 }
 

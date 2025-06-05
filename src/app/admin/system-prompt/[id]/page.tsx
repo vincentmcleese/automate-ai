@@ -21,6 +21,7 @@ import { ArrowLeft, Save, RefreshCw, History, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { SystemPrompt, PromptCategory, TrainingData } from '@/types/admin'
 import { TrainingDataTab } from '@/components/admin/TrainingDataTab'
+import { ModelSelector } from '@/components/admin/ModelSelector'
 
 interface SystemPromptEditPageProps {
   params: Promise<{ id: string }>
@@ -40,6 +41,7 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
     category: 'custom' as PromptCategory,
     prompt_content: '',
     variables: '{}',
+    model_id: undefined as string | undefined,
     is_active: true,
   })
 
@@ -82,6 +84,7 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
           category: prompt.category,
           prompt_content: prompt.prompt_content,
           variables: JSON.stringify(prompt.variables, null, 2),
+          model_id: prompt.model_id,
           is_active: prompt.is_active,
         })
 
@@ -99,7 +102,7 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
     loadPrompt()
   }, [params, router])
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field: string, value: string | boolean | undefined) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
@@ -130,7 +133,8 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
         formData.category !== originalPrompt?.category ||
         formData.prompt_content !== originalPrompt?.prompt_content ||
         JSON.stringify(parsedVariables) !== JSON.stringify(originalPrompt?.variables) ||
-        formData.is_active !== originalPrompt?.is_active
+        formData.is_active !== originalPrompt?.is_active ||
+        formData.model_id !== originalPrompt?.model_id
 
       if (!hasChanges) {
         toast.info('No changes detected')
@@ -148,6 +152,7 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
           category: formData.category,
           prompt_content: formData.prompt_content,
           variables: parsedVariables,
+          model_id: formData.model_id,
           is_active: formData.is_active,
         }),
       })
@@ -174,6 +179,7 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
         category: updatedPrompt.category,
         prompt_content: updatedPrompt.prompt_content,
         variables: JSON.stringify(updatedPrompt.variables, null, 2),
+        model_id: updatedPrompt.model_id,
         is_active: updatedPrompt.is_active,
       })
     } catch (error) {
@@ -396,6 +402,17 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
                     </p>
                   </div>
 
+                  {/* Model */}
+                  <div className="space-y-2">
+                    <Label htmlFor="model_id">Model</Label>
+                    <ModelSelector
+                      value={formData.model_id}
+                      onValueChange={(value: string | undefined) =>
+                        handleInputChange('model_id', value)
+                      }
+                    />
+                  </div>
+
                   {/* Active Status */}
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -471,6 +488,15 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
                         JSON.stringify(originalPrompt.variables) && (
                         <div className="text-sm">
                           <span className="font-medium">Variables have been modified</span>
+                        </div>
+                      )}
+                      {formData.model_id !== originalPrompt.model_id && (
+                        <div className="text-sm">
+                          <span className="font-medium">Model:</span>{' '}
+                          <span className="text-red-600 line-through">
+                            {originalPrompt.model_id}
+                          </span>{' '}
+                          <span className="text-green-600">{formData.model_id}</span>
                         </div>
                       )}
                     </div>

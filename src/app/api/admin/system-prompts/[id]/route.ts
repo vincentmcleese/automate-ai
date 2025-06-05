@@ -89,6 +89,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       updateData.prompt_content = sanitizePromptContent(body.prompt_content)
     }
     if (body.variables !== undefined) updateData.variables = body.variables
+    if (body.model_id !== undefined) updateData.model_id = body.model_id
     if (body.is_active !== undefined) updateData.is_active = body.is_active
 
     // If this is a significant update (content or name change), create a version backup

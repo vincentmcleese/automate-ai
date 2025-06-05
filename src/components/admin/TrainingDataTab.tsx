@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Plus, FileText, Eye, Zap } from 'lucide-react'
+import { Plus, FileText, Eye, Zap, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { TrainingData, SystemPrompt } from '@/types/admin'
 import { TrainingDataForm } from './TrainingDataForm'
@@ -24,6 +24,8 @@ export function TrainingDataTab({
 }: TrainingDataTabProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showFullPrompt, setShowFullPrompt] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleAddDocument = async (data: { title: string; content: string }) => {
     try {
@@ -49,6 +51,104 @@ export function TrainingDataTab({
     }
   }
 
+  const handleBulkUpload = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    let successCount = 0
+    let errorCount = 0
+
+    try {
+      for (const file of Array.from(files)) {
+        try {
+          // Check if file is JSON
+          if (!file.name.toLowerCase().endsWith('.json')) {
+            console.warn(`Skipping non-JSON file: ${file.name}`)
+            errorCount++
+            continue
+          }
+
+          // Read file content
+          const content = await readFileAsText(file)
+
+          // Validate JSON
+          let formattedContent: string
+          try {
+            const parsed = JSON.parse(content)
+            formattedContent = JSON.stringify(parsed, null, 2)
+          } catch (jsonError) {
+            console.error(`Invalid JSON in file ${file.name}:`, jsonError)
+            errorCount++
+            continue
+          }
+
+          // Extract title from filename (remove .json extension)
+          const title = file.name.replace(/\.json$/i, '')
+
+          // Add training data
+          const response = await fetch(
+            `/api/admin/system-prompts/${systemPrompt.id}/training-data`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                title,
+                content: formattedContent,
+              }),
+            }
+          )
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'Failed to add training data')
+          }
+
+          successCount++
+        } catch (error) {
+          console.error(`Error processing file ${file.name}:`, error)
+          errorCount++
+        }
+      }
+
+      // Show results
+      if (successCount > 0) {
+        toast.success(
+          `Successfully uploaded ${successCount} JSON file${successCount !== 1 ? 's' : ''}`
+        )
+        onTrainingDataChange()
+      }
+
+      if (errorCount > 0) {
+        toast.error(`Failed to upload ${errorCount} file${errorCount !== 1 ? 's' : ''}`)
+      }
+    } catch (error) {
+      console.error('Error during bulk upload:', error)
+      toast.error('Failed to process files')
+    } finally {
+      setUploading(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = e => resolve(e.target?.result as string)
+      reader.onerror = e => reject(e.target?.error)
+      reader.readAsText(file)
+    })
+  }
+
   const handleRefresh = useCallback(() => {
     onTrainingDataChange()
   }, [onTrainingDataChange])
@@ -60,6 +160,16 @@ export function TrainingDataTab({
 
   return (
     <div className="space-y-6">
+      {/* Hidden file input for bulk upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".json"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
+
       {/* Overview Section */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card className="border-[#e5e7eb]">
@@ -115,6 +225,16 @@ export function TrainingDataTab({
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Training Data
+          </Button>
+
+          <Button
+            onClick={handleBulkUpload}
+            disabled={uploading}
+            variant="outline"
+            className="border-[#e5e7eb]"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {uploading ? 'Uploading...' : 'Bulk Upload JSONs'}
           </Button>
 
           {trainingData.length > 0 && (

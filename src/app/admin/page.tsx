@@ -27,15 +27,16 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  FileText,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { SystemPrompt, PromptCategory } from '@/types/admin'
+import { PromptCategory, SystemPromptWithTrainingData } from '@/types/admin'
 
 export default function AdminPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [systemPromptsLoading, setSystemPromptsLoading] = useState(false)
-  const [systemPrompts, setSystemPrompts] = useState<SystemPrompt[]>([])
+  const [systemPromptsLoading, setSystemPromptsLoading] = useState(true)
+  const [systemPrompts, setSystemPrompts] = useState<SystemPromptWithTrainingData[]>([])
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean
     promptId: string
@@ -361,6 +362,7 @@ export default function AdminPage() {
                           <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Category</TableHead>
+                            <TableHead>Model</TableHead>
                             <TableHead>Version</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Created</TableHead>
@@ -379,6 +381,15 @@ export default function AdminPage() {
                                       {prompt.description}
                                     </p>
                                   )}
+                                  {prompt.training_data_count && prompt.training_data_count > 0 && (
+                                    <div className="mt-1 flex items-center space-x-1">
+                                      <FileText className="h-3 w-3 text-[#6b7280]" />
+                                      <span className="text-xs text-[#6b7280]">
+                                        {prompt.training_data_count} training doc
+                                        {prompt.training_data_count !== 1 ? 's' : ''}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -388,6 +399,18 @@ export default function AdminPage() {
                                 >
                                   {prompt.category.replace('_', ' ')}
                                 </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {prompt.model_id ? (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-blue-100 font-mono text-xs text-blue-800"
+                                  >
+                                    {prompt.model_id}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-[#6b7280]">System Default</span>
+                                )}
                               </TableCell>
                               <TableCell>
                                 <Badge variant="secondary" className="bg-gray-100 text-gray-800">

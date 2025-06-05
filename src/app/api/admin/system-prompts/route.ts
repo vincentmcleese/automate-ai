@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
       category: body.category || 'custom',
       prompt_content: sanitizePromptContent(body.prompt_content),
       variables: body.variables || {},
+      model_id: body.model_id,
       is_active: body.is_active !== false, // Default to true
     }
 
