@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import {
   Settings,
   MessageSquare,
@@ -35,6 +36,15 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [systemPromptsLoading, setSystemPromptsLoading] = useState(false)
   const [systemPrompts, setSystemPrompts] = useState<SystemPrompt[]>([])
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean
+    promptId: string
+    promptName: string
+  }>({
+    open: false,
+    promptId: '',
+    promptName: '',
+  })
   const [stats, setStats] = useState({
     prompts: 0,
     models: 0,
@@ -149,13 +159,7 @@ export default function AdminPage() {
     }
   }
 
-  const deletePrompt = async (promptId: string, promptName: string) => {
-    if (
-      !confirm(`Are you sure you want to delete "${promptName}"? This action cannot be undone.`)
-    ) {
-      return
-    }
-
+  const deletePrompt = async (promptId: string) => {
     try {
       const response = await fetch(`/api/admin/system-prompts/${promptId}`, {
         method: 'DELETE',
@@ -172,6 +176,19 @@ export default function AdminPage() {
       console.error('Error deleting prompt:', error)
       toast.error('Failed to delete prompt')
     }
+  }
+
+  const handleDeleteClick = (promptId: string, promptName: string) => {
+    setDeleteDialog({
+      open: true,
+      promptId,
+      promptName,
+    })
+  }
+
+  const handleDeleteConfirm = async () => {
+    await deletePrompt(deleteDialog.promptId)
+    setDeleteDialog({ open: false, promptId: '', promptName: '' })
   }
 
   const getCategoryBadgeColor = (category: PromptCategory) => {
@@ -421,7 +438,7 @@ export default function AdminPage() {
                                     variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                                    onClick={() => deletePrompt(prompt.id, prompt.name)}
+                                    onClick={() => handleDeleteClick(prompt.id, prompt.name)}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -475,6 +492,20 @@ export default function AdminPage() {
           </Tabs>
         </div>
       </div>
+      <ConfirmationDialog
+        open={deleteDialog.open}
+        onOpenChange={open => {
+          if (!open) {
+            setDeleteDialog({ open: false, promptId: '', promptName: '' })
+          }
+        }}
+        title="Confirm Deletion"
+        description={`Are you sure you want to delete the system prompt "${deleteDialog.promptName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   )
 }

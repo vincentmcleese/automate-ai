@@ -196,13 +196,13 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
               </Button>
               <div>
                 <h1 className="text-2xl font-bold text-[#000000]">Edit System Prompt</h1>
-                <p className="text-[#6b7280]">
+                <div className="text-[#6b7280]">
                   {originalPrompt && (
                     <>
                       Current version: <Badge variant="secondary">v{originalPrompt.version}</Badge>
                     </>
                   )}
-                </p>
+                </div>
               </div>
             </div>
             <div className="flex items-center space-x-3">
