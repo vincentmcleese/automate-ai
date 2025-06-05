@@ -6,7 +6,7 @@ export interface SystemPrompt {
   description?: string
   category: PromptCategory
   prompt_content: string
-  variables: Record<string, unknown>
+  variables: Record<string, any>
   is_active: boolean
   version: number
   created_by?: string
@@ -166,4 +166,30 @@ export interface WorkflowJSON {
     estimated_runtime: string
     dependencies: string[]
   }
+}
+
+// Training data types
+export interface TrainingData {
+  id: string
+  system_prompt_id: string
+  title: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateTrainingDataData {
+  title: string
+  content: string
+}
+
+export interface UpdateTrainingDataData {
+  title?: string
+  content?: string
+}
+
+// Enhanced system prompt with training data info
+export interface SystemPromptWithTrainingData extends SystemPrompt {
+  training_data_count?: number
+  estimated_tokens?: number
 }

@@ -267,6 +267,53 @@ export function isServiceRoleAvailable(): boolean {
 }
 
 /**
+ * Estimate token count from text (character count / 4)
+ */
+export function estimateTokenCount(text: string): number {
+  return Math.ceil(text.length / 4)
+}
+
+/**
+ * Combine system prompt with training data
+ */
+export function combinePromptWithTrainingData(
+  promptContent: string,
+  trainingData: Array<{ title: string; content: string }>
+): string {
+  if (!trainingData || trainingData.length === 0) {
+    return promptContent
+  }
+
+  const trainingSection = trainingData
+    .map(data => `## ${data.title}\n\n${data.content}`)
+    .join('\n\n')
+
+  return `${promptContent}\n\n${trainingSection}`
+}
+
+/**
+ * Get combined prompt with training data and token estimation
+ */
+export function getPromptWithTrainingDataStats(
+  promptContent: string,
+  trainingData: Array<{ title: string; content: string }>
+): {
+  combinedPrompt: string
+  estimatedTokens: number
+  characterCount: number
+} {
+  const combinedPrompt = combinePromptWithTrainingData(promptContent, trainingData)
+  const characterCount = combinedPrompt.length
+  const estimatedTokens = estimateTokenCount(combinedPrompt)
+
+  return {
+    combinedPrompt,
+    estimatedTokens,
+    characterCount,
+  }
+}
+
+/**
  * Estimate tokens in text (rough approximation)
  */
 export function estimateTokens(text: string): number {

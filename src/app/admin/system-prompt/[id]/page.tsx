@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -16,9 +17,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { ArrowLeft, Save, RefreshCw, History } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, History, FileText } from 'lucide-react'
 import { toast } from 'sonner'
-import { SystemPrompt, PromptCategory } from '@/types/admin'
+import { SystemPrompt, PromptCategory, TrainingData } from '@/types/admin'
+import { TrainingDataTab } from '@/components/admin/TrainingDataTab'
 
 interface SystemPromptEditPageProps {
   params: Promise<{ id: string }>
@@ -30,6 +32,8 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
   const [saving, setSaving] = useState(false)
   const [promptId, setPromptId] = useState<string>('')
   const [originalPrompt, setOriginalPrompt] = useState<SystemPrompt | null>(null)
+  const [trainingData, setTrainingData] = useState<TrainingData[]>([])
+  const [activeTab, setActiveTab] = useState('prompt')
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -38,6 +42,18 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
     variables: '{}',
     is_active: true,
   })
+
+  const loadTrainingData = async (promptId: string) => {
+    try {
+      const response = await fetch(`/api/admin/system-prompts/${promptId}/training-data`)
+      if (response.ok) {
+        const data = await response.json()
+        setTrainingData(data.training_data || [])
+      }
+    } catch (error) {
+      console.error('Error loading training data:', error)
+    }
+  }
 
   useEffect(() => {
     const loadPrompt = async () => {
@@ -68,6 +84,9 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
           variables: JSON.stringify(prompt.variables, null, 2),
           is_active: prompt.is_active,
         })
+
+        // Load training data
+        await loadTrainingData(resolvedParams.id)
       } catch (error) {
         console.error('Error loading prompt:', error)
         toast.error('Failed to load system prompt')
@@ -85,6 +104,10 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
       ...prev,
       [field]: value,
     }))
+  }
+
+  const handleTrainingDataChange = () => {
+    loadTrainingData(promptId)
   }
 
   const handleSave = async () => {
@@ -142,7 +165,17 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
         toast.success('System prompt updated successfully!')
       }
 
-      router.push('/admin')
+      // Update original prompt to reflect changes
+      const updatedPrompt = result.prompt
+      setOriginalPrompt(updatedPrompt)
+      setFormData({
+        name: updatedPrompt.name,
+        description: updatedPrompt.description || '',
+        category: updatedPrompt.category,
+        prompt_content: updatedPrompt.prompt_content,
+        variables: JSON.stringify(updatedPrompt.variables, null, 2),
+        is_active: updatedPrompt.is_active,
+      })
     } catch (error) {
       console.error('Error saving prompt:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to save system prompt')
@@ -182,7 +215,7 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
   return (
     <div className="min-h-screen bg-[#f8f9fa]">
       <div className="container mx-auto px-4 py-8">
-        <div className="mx-auto max-w-4xl space-y-6">
+        <div className="mx-auto max-w-6xl space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -196,10 +229,20 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
               </Button>
               <div>
                 <h1 className="text-2xl font-bold text-[#000000]">Edit System Prompt</h1>
-                <div className="text-[#6b7280]">
+                <div className="flex items-center space-x-3 text-[#6b7280]">
                   {originalPrompt && (
                     <>
-                      Current version: <Badge variant="secondary">v{originalPrompt.version}</Badge>
+                      <span>
+                        Current version:{' '}
+                        <Badge variant="secondary">v{originalPrompt.version}</Badge>
+                      </span>
+                      {trainingData.length > 0 && (
+                        <Badge variant="outline" className="border-[#e5e7eb]">
+                          <FileText className="mr-1 h-3 w-3" />
+                          {trainingData.length} training document
+                          {trainingData.length !== 1 ? 's' : ''}
+                        </Badge>
+                      )}
                     </>
                   )}
                 </div>
@@ -225,193 +268,227 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
             </div>
           </div>
 
-          {/* Form */}
-          <Card className="border-[#e5e7eb]">
-            <CardHeader>
-              <CardTitle>Prompt Details</CardTitle>
-              <CardDescription>
-                Edit the system prompt details. Significant changes will create a new version.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={e => handleInputChange('name', e.target.value)}
-                  placeholder="Enter prompt name"
-                  className="border-[#e5e7eb]"
-                />
-              </div>
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="prompt">Prompt Settings</TabsTrigger>
+              <TabsTrigger value="training">
+                Training Data
+                {trainingData.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-800">
+                    {trainingData.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={formData.description}
-                  onChange={e => handleInputChange('description', e.target.value)}
-                  placeholder="Enter prompt description (optional)"
-                  className="border-[#e5e7eb]"
-                />
-              </div>
+            <TabsContent value="prompt" className="space-y-6">
+              {/* Form */}
+              <Card className="border-[#e5e7eb]">
+                <CardHeader>
+                  <CardTitle>Prompt Details</CardTitle>
+                  <CardDescription>
+                    Edit the system prompt details. Significant changes will create a new version.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={e => handleInputChange('name', e.target.value)}
+                      placeholder="Enter prompt name"
+                      className="border-[#e5e7eb]"
+                    />
+                  </div>
 
-              {/* Category */}
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value: PromptCategory) => handleInputChange('category', value)}
-                >
-                  <SelectTrigger className="border-[#e5e7eb]">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="validation">
-                      <div>
-                        <div className="font-medium">Validation</div>
-                        <div className="text-sm text-[#6b7280]">
-                          {getCategoryDescription('validation')}
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Input
+                      id="description"
+                      value={formData.description}
+                      onChange={e => handleInputChange('description', e.target.value)}
+                      placeholder="Enter prompt description (optional)"
+                      className="border-[#e5e7eb]"
+                    />
+                  </div>
+
+                  {/* Category */}
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value: PromptCategory) =>
+                        handleInputChange('category', value)
+                      }
+                    >
+                      <SelectTrigger className="border-[#e5e7eb]">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="validation">
+                          <div>
+                            <div className="font-medium">Validation</div>
+                            <div className="text-sm text-[#6b7280]">
+                              {getCategoryDescription('validation')}
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="json_generation">
+                          <div>
+                            <div className="font-medium">JSON Generation</div>
+                            <div className="text-sm text-[#6b7280]">
+                              {getCategoryDescription('json_generation')}
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="workflow_analysis">
+                          <div>
+                            <div className="font-medium">Workflow Analysis</div>
+                            <div className="text-sm text-[#6b7280]">
+                              {getCategoryDescription('workflow_analysis')}
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="custom">
+                          <div>
+                            <div className="font-medium">Custom</div>
+                            <div className="text-sm text-[#6b7280]">
+                              {getCategoryDescription('custom')}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Prompt Content */}
+                  <div className="space-y-2">
+                    <Label htmlFor="prompt_content">Prompt Content</Label>
+                    <Textarea
+                      id="prompt_content"
+                      value={formData.prompt_content}
+                      onChange={e => handleInputChange('prompt_content', e.target.value)}
+                      placeholder="Enter the system prompt content..."
+                      className="min-h-[200px] border-[#e5e7eb] font-mono text-sm"
+                    />
+                    <div className="flex items-center justify-between text-xs text-[#6b7280]">
+                      <span>Use &#123;&#123;variable_name&#125;&#125; for template variables</span>
+                      <span>~{Math.ceil(formData.prompt_content.length / 4)} tokens</span>
+                    </div>
+                  </div>
+
+                  {/* Variables */}
+                  <div className="space-y-2">
+                    <Label htmlFor="variables">Variables (JSON)</Label>
+                    <Textarea
+                      id="variables"
+                      value={formData.variables}
+                      onChange={e => handleInputChange('variables', e.target.value)}
+                      placeholder='{"variable_name": "description"}'
+                      className="min-h-[100px] border-[#e5e7eb] font-mono text-sm"
+                    />
+                    <p className="text-xs text-[#6b7280]">
+                      Define template variables and their descriptions in JSON format
+                    </p>
+                  </div>
+
+                  {/* Active Status */}
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is_active"
+                      checked={formData.is_active}
+                      onCheckedChange={(checked: boolean) =>
+                        handleInputChange('is_active', checked)
+                      }
+                    />
+                    <Label htmlFor="is_active">Active</Label>
+                    <p className="text-sm text-[#6b7280]">
+                      Only active prompts are available for use in workflows
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Changes Preview */}
+              {originalPrompt && (
+                <Card className="border-[#e5e7eb]">
+                  <CardHeader>
+                    <CardTitle>Change Summary</CardTitle>
+                    <CardDescription>
+                      Review the changes that will be made to this prompt
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {formData.name !== originalPrompt.name && (
+                        <div className="text-sm">
+                          <span className="font-medium">Name:</span>{' '}
+                          <span className="text-red-600 line-through">{originalPrompt.name}</span>{' '}
+                          <span className="text-green-600">{formData.name}</span>
                         </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="json_generation">
-                      <div>
-                        <div className="font-medium">JSON Generation</div>
-                        <div className="text-sm text-[#6b7280]">
-                          {getCategoryDescription('json_generation')}
+                      )}
+                      {formData.description !== (originalPrompt.description || '') && (
+                        <div className="text-sm">
+                          <span className="font-medium">Description:</span>{' '}
+                          <span className="text-red-600 line-through">
+                            {originalPrompt.description || '(empty)'}
+                          </span>{' '}
+                          <span className="text-green-600">
+                            {formData.description || '(empty)'}
+                          </span>
                         </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="workflow_analysis">
-                      <div>
-                        <div className="font-medium">Workflow Analysis</div>
-                        <div className="text-sm text-[#6b7280]">
-                          {getCategoryDescription('workflow_analysis')}
+                      )}
+                      {formData.category !== originalPrompt.category && (
+                        <div className="text-sm">
+                          <span className="font-medium">Category:</span>{' '}
+                          <span className="text-red-600 line-through">
+                            {originalPrompt.category}
+                          </span>{' '}
+                          <span className="text-green-600">{formData.category}</span>
                         </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="custom">
-                      <div>
-                        <div className="font-medium">Custom</div>
-                        <div className="text-sm text-[#6b7280]">
-                          {getCategoryDescription('custom')}
+                      )}
+                      {formData.is_active !== originalPrompt.is_active && (
+                        <div className="text-sm">
+                          <span className="font-medium">Status:</span>{' '}
+                          <span className="text-red-600 line-through">
+                            {originalPrompt.is_active ? 'Active' : 'Inactive'}
+                          </span>{' '}
+                          <span className="text-green-600">
+                            {formData.is_active ? 'Active' : 'Inactive'}
+                          </span>
                         </div>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                      )}
+                      {formData.prompt_content !== originalPrompt.prompt_content && (
+                        <div className="text-sm">
+                          <span className="font-medium">Prompt content has been modified</span>
+                        </div>
+                      )}
+                      {JSON.stringify(JSON.parse(formData.variables)) !==
+                        JSON.stringify(originalPrompt.variables) && (
+                        <div className="text-sm">
+                          <span className="font-medium">Variables have been modified</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
-              {/* Prompt Content */}
-              <div className="space-y-2">
-                <Label htmlFor="prompt_content">Prompt Content</Label>
-                <Textarea
-                  id="prompt_content"
-                  value={formData.prompt_content}
-                  onChange={e => handleInputChange('prompt_content', e.target.value)}
-                  placeholder="Enter the system prompt content..."
-                  className="min-h-[200px] border-[#e5e7eb] font-mono text-sm"
+            <TabsContent value="training">
+              {originalPrompt && (
+                <TrainingDataTab
+                  systemPrompt={originalPrompt}
+                  trainingData={trainingData}
+                  onTrainingDataChange={handleTrainingDataChange}
                 />
-                <p className="text-xs text-[#6b7280]">
-                  Use &#123;&#123;variable_name&#125;&#125; for template variables
-                </p>
-              </div>
-
-              {/* Variables */}
-              <div className="space-y-2">
-                <Label htmlFor="variables">Variables (JSON)</Label>
-                <Textarea
-                  id="variables"
-                  value={formData.variables}
-                  onChange={e => handleInputChange('variables', e.target.value)}
-                  placeholder='{"variable_name": "description"}'
-                  className="min-h-[100px] border-[#e5e7eb] font-mono text-sm"
-                />
-                <p className="text-xs text-[#6b7280]">
-                  Define template variables and their descriptions in JSON format
-                </p>
-              </div>
-
-              {/* Active Status */}
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked: boolean) => handleInputChange('is_active', checked)}
-                />
-                <Label htmlFor="is_active">Active</Label>
-                <p className="text-sm text-[#6b7280]">
-                  Only active prompts are available for use in workflows
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Changes Preview */}
-          {originalPrompt && (
-            <Card className="border-[#e5e7eb]">
-              <CardHeader>
-                <CardTitle>Change Summary</CardTitle>
-                <CardDescription>
-                  Review the changes that will be made to this prompt
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {formData.name !== originalPrompt.name && (
-                    <div className="text-sm">
-                      <span className="font-medium">Name:</span>{' '}
-                      <span className="text-red-600 line-through">{originalPrompt.name}</span>{' '}
-                      <span className="text-green-600">{formData.name}</span>
-                    </div>
-                  )}
-                  {formData.description !== (originalPrompt.description || '') && (
-                    <div className="text-sm">
-                      <span className="font-medium">Description:</span>{' '}
-                      <span className="text-red-600 line-through">
-                        {originalPrompt.description || '(empty)'}
-                      </span>{' '}
-                      <span className="text-green-600">{formData.description || '(empty)'}</span>
-                    </div>
-                  )}
-                  {formData.category !== originalPrompt.category && (
-                    <div className="text-sm">
-                      <span className="font-medium">Category:</span>{' '}
-                      <span className="text-red-600 line-through">{originalPrompt.category}</span>{' '}
-                      <span className="text-green-600">{formData.category}</span>
-                    </div>
-                  )}
-                  {formData.is_active !== originalPrompt.is_active && (
-                    <div className="text-sm">
-                      <span className="font-medium">Status:</span>{' '}
-                      <span className="text-red-600 line-through">
-                        {originalPrompt.is_active ? 'Active' : 'Inactive'}
-                      </span>{' '}
-                      <span className="text-green-600">
-                        {formData.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  )}
-                  {formData.prompt_content !== originalPrompt.prompt_content && (
-                    <div className="text-sm">
-                      <span className="font-medium">Prompt Content:</span>{' '}
-                      <span className="text-[#6b7280]">Modified</span>
-                    </div>
-                  )}
-                  {JSON.stringify(JSON.parse(formData.variables)) !==
-                    JSON.stringify(originalPrompt.variables) && (
-                    <div className="text-sm">
-                      <span className="font-medium">Variables:</span>{' '}
-                      <span className="text-[#6b7280]">Modified</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

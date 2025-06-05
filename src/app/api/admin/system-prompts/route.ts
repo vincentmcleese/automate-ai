@@ -26,7 +26,12 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('system_prompts')
-      .select('*')
+      .select(
+        `
+        *,
+        training_data_count:system_prompt_training_data(count)
+      `
+      )
       .order('created_at', { ascending: false })
 
     if (category) {
@@ -44,7 +49,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch system prompts' }, { status: 500 })
     }
 
-    return NextResponse.json({ prompts })
+    // Transform the data to include training data count and estimated tokens
+    const promptsWithStats =
+      prompts?.map(prompt => {
+        const trainingDataCount = prompt.training_data_count?.[0]?.count || 0
+        const estimatedTokens = Math.ceil(prompt.prompt_content.length / 4)
+
+        return {
+          ...prompt,
+          training_data_count: trainingDataCount,
+          estimated_tokens: estimatedTokens,
+        }
+      }) || []
+
+    return NextResponse.json({ prompts: promptsWithStats })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Access denied'
     const status = message.includes('required') ? 401 : 403
