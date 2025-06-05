@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useAuth } from "@/lib/auth/context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import {
 import { User, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 
-export function UserMenu() {
+const UserMenuContent = React.memo(function UserMenuContent() {
   const { user, signOut, loading } = useAuth();
 
   if (loading) {
@@ -102,4 +103,8 @@ export function UserMenu() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
+});
+
+export function UserMenu() {
+  return <UserMenuContent />;
 }
