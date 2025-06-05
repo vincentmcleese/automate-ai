@@ -1,0 +1,33 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+📋 FUNCTIONAL REQUIREMENTS
+Core Features
+Workflow Builder
+Natural language input for workflow descriptions
+AI-powered validation of workflows (trigger/process/action breakdown)
+JSON generation from validated workflows
+Tool selection interface for triggers, processes, and actions
+Existing workflow suggestions/templates
+Authentication System
+Google OAuth integration via Supabase Auth
+User session management
+Protected routes for authenticated users
+Admin Panel
+AI model management (CRUD operations)
+System prompt editing for validation and JSON creation
+Training data management (add/edit/delete examples)
+JSON file upload for bulk training data
+OpenRouter API credits monitoring
+Token estimation for prompts
+Workflow Management
+Individual workflow pages with shareable URLs/slugs
+Workflow metadata (title, description, tools used)
+JSON output display with copy functionality
+Email guide functionality (placeholder)
+External Integrations
+OpenRouter API for AI model calls (GPT-3.5, GPT-4, Claude, etc.)
+Supabase for database and authentication
+Toast notifications for user feedback
