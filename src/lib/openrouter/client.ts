@@ -33,20 +33,40 @@ export class OpenRouterClient {
    */
   async chatCompletion(request: OpenRouterChatRequest): Promise<OpenRouterChatResponse> {
     try {
+      console.log('Making OpenRouter API request:', {
+        model: request.model,
+        messagesCount: request.messages.length,
+        maxTokens: request.max_tokens,
+      })
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: this.defaultHeaders,
         body: JSON.stringify(request),
       })
 
+      console.log('OpenRouter API response status:', response.status)
+
       if (!response.ok) {
-        const errorData: OpenRouterError = await response.json()
+        let errorData: OpenRouterError
+        try {
+          errorData = await response.json()
+          console.error('OpenRouter API error response:', errorData)
+        } catch (parseError) {
+          console.error('Failed to parse OpenRouter error response:', parseError)
+          throw new Error(`OpenRouter API error: HTTP ${response.status} ${response.statusText}`)
+        }
         throw new Error(`OpenRouter API error: ${errorData.error.message}`)
       }
 
       const data: OpenRouterChatResponse = await response.json()
+      console.log('OpenRouter API success:', {
+        choicesCount: data.choices?.length || 0,
+        finishReason: data.choices?.[0]?.finish_reason,
+      })
       return data
     } catch (error) {
+      console.error('Error in chatCompletion:', error)
       if (error instanceof Error) {
         throw error
       }
@@ -111,14 +131,101 @@ export class OpenRouterClient {
     model: string = 'openai/gpt-4o-mini'
   ): Promise<any> {
     try {
+      console.log('Starting workflow validation with model:', model)
+
       const response = await this.completeWithSystem(systemPrompt, workflowDescription, model, {
         temperature: 0.2,
         max_tokens: 1500,
       })
 
+      console.log('Raw AI response received:', {
+        responseLength: response.length,
+        firstChars: response.substring(0, 100),
+        lastChars: response.length > 100 ? response.substring(response.length - 100) : 'N/A',
+      })
+
       // Try to parse as JSON
-      return JSON.parse(response)
+      let parsedResponse
+      try {
+        parsedResponse = JSON.parse(response)
+        console.log('Successfully parsed JSON response:', {
+          hasIsValid: 'is_valid' in parsedResponse,
+          hasConfidence: 'confidence' in parsedResponse,
+          keys: Object.keys(parsedResponse),
+        })
+      } catch (parseError) {
+        console.error('Failed to parse AI response as JSON:', parseError)
+        console.error('Raw response that failed to parse:', response)
+
+        // Try to extract JSON from the response if it's wrapped in text
+        const jsonMatch = response.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          try {
+            parsedResponse = JSON.parse(jsonMatch[0])
+            console.log('Successfully extracted and parsed JSON from response')
+          } catch (extractError) {
+            console.error('Failed to extract JSON from response:', extractError)
+            throw new Error(
+              `AI returned invalid JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`
+            )
+          }
+        } else {
+          // If no JSON found, return a fallback response
+          console.warn('No JSON found in response, returning fallback validation result')
+          return {
+            is_valid: false,
+            confidence: 0.1,
+            triggers: [],
+            processes: [],
+            tools_needed: [],
+            complexity: 'complex',
+            estimated_time: 8,
+            suggestions: [
+              'The workflow description could not be processed. Please try rephrasing your description more clearly.',
+            ],
+          }
+        }
+      }
+
+      // Validate the required fields exist
+      const requiredFields = [
+        'is_valid',
+        'confidence',
+        'triggers',
+        'processes',
+        'tools_needed',
+        'complexity',
+        'estimated_time',
+        'suggestions',
+      ]
+      const missingFields = requiredFields.filter(field => !(field in parsedResponse))
+
+      if (missingFields.length > 0) {
+        console.warn('Response missing required fields:', missingFields)
+        // Fill in missing fields with defaults
+        const defaults = {
+          is_valid: false,
+          confidence: 0.1,
+          triggers: [],
+          processes: [],
+          tools_needed: [],
+          complexity: 'complex',
+          estimated_time: 8,
+          suggestions: [
+            'The workflow validation returned incomplete information. Please try again.',
+          ],
+        }
+
+        missingFields.forEach(field => {
+          if (!(field in parsedResponse)) {
+            parsedResponse[field] = defaults[field as keyof typeof defaults]
+          }
+        })
+      }
+
+      return parsedResponse
     } catch (error) {
+      console.error('Error in validateWorkflow:', error)
       throw new Error(
         `Failed to validate workflow: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
