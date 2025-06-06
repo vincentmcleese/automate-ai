@@ -1,32 +1,32 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { UserMenu } from "@/components/auth/user-menu";
+import Link from 'next/link'
+import { UserMenu } from '@/components/auth/user-menu'
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
       <div className="container mx-auto flex h-14 items-center">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold text-xl">AutomateAI</span>
+            <span className="text-xl font-bold">AutomateAI</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             <Link
               href="/dashboard"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className="hover:text-foreground/80 text-foreground/60 transition-colors"
             >
               Dashboard
             </Link>
             <Link
-              href="/features"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              href="/automations"
+              className="hover:text-foreground/80 text-foreground/60 transition-colors"
             >
-              Features
+              Automations
             </Link>
             <Link
               href="/pricing"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className="hover:text-foreground/80 text-foreground/60 transition-colors"
             >
               Pricing
             </Link>
@@ -42,5 +42,5 @@ export function Header() {
         </div>
       </div>
     </header>
-  );
+  )
 }

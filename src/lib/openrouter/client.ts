@@ -123,6 +123,28 @@ export class OpenRouterClient {
   }
 
   /**
+   * Generate content using a system prompt
+   */
+  async generateContent(
+    systemPrompt: string,
+    model: string = 'openai/gpt-4o-mini',
+    options: Partial<OpenRouterChatRequest> = {}
+  ): Promise<string> {
+    const messages: OpenRouterChatMessage[] = [{ role: 'system', content: systemPrompt }]
+
+    const request: OpenRouterChatRequest = {
+      model,
+      messages,
+      max_tokens: 500,
+      temperature: 0.8,
+      ...options,
+    }
+
+    const response = await this.chatCompletion(request)
+    return response.choices[0]?.message?.content || ''
+  }
+
+  /**
    * Validate workflow description using AI
    */
   async validateWorkflow(
@@ -241,21 +263,72 @@ export class OpenRouterClient {
     systemPrompt: string,
     model: string = 'openai/gpt-4o-mini'
   ): Promise<any> {
-    try {
-      const userInput = `Workflow: ${workflowDescription}\n\nValidation Results: ${JSON.stringify(validationResults, null, 2)}`
+    const maxRetries = 2
+    let lastError: Error | null = null
 
-      const response = await this.completeWithSystem(systemPrompt, userInput, model, {
-        temperature: 0.1,
-        max_tokens: 2000,
-      })
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const userInput = `Workflow: ${workflowDescription}\n\nValidation Results: ${JSON.stringify(validationResults, null, 2)}`
 
-      // Try to parse as JSON
-      return JSON.parse(response)
-    } catch (error) {
-      throw new Error(
-        `Failed to generate workflow JSON: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+        // Use 200K tokens - handles complex workflows while staying efficient
+        const maxTokens = 200000
+        const response = await this.completeWithSystem(systemPrompt, userInput, model, {
+          temperature: 0.1,
+          max_tokens: maxTokens,
+        })
+
+        console.log(`Attempt ${attempt}: Response length ${response.length} characters`)
+
+        // Try to extract JSON from potential markdown blocks
+        let jsonString = response.trim()
+        const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+        if (jsonMatch) {
+          jsonString = jsonMatch[1].trim()
+        }
+
+        // Try to parse as JSON
+        let parsedJson: any
+        try {
+          parsedJson = JSON.parse(jsonString)
+        } catch (parseError) {
+          console.warn(`Attempt ${attempt}: JSON parse failed:`, parseError)
+
+          // If this looks like a truncated JSON, try to recover
+          if (jsonString.includes('{') && !jsonString.endsWith('}')) {
+            console.log(`Attempt ${attempt}: Detected truncated JSON, retrying...`)
+            lastError = new Error(`Response appears truncated (attempt ${attempt}/${maxRetries})`)
+            continue
+          }
+
+          // If it's not truncated, this is a parsing error
+          throw new Error(
+            `Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`
+          )
+        }
+
+        // Validate that we got a reasonable JSON structure
+        if (typeof parsedJson !== 'object' || parsedJson === null) {
+          throw new Error('Response is not a valid JSON object')
+        }
+
+        console.log(`Attempt ${attempt}: Successfully generated and parsed JSON`)
+        return parsedJson
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed:`, error)
+        lastError = error instanceof Error ? error : new Error('Unknown error')
+
+        if (attempt === maxRetries) {
+          break
+        }
+
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
     }
+
+    throw new Error(
+      `Failed to generate workflow JSON after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`
+    )
   }
 
   /**
@@ -354,6 +427,14 @@ export const openRouterClient = {
   ): Promise<any> {
     const client = getOpenRouterClient()
     return client.generateWorkflowJSON(workflowDescription, validationResults, systemPrompt, model)
+  },
+
+  async generateContent(
+    systemPrompt: string,
+    model: string = 'openai/gpt-4o-mini'
+  ): Promise<string> {
+    const client = getOpenRouterClient()
+    return client.generateContent(systemPrompt, model)
   },
 
   async getAvailableModels(): Promise<any[]> {

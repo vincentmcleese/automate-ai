@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -8,8 +9,10 @@ import { WorkflowValidation } from '@/components/WorkflowValidation'
 import { WorkflowValidationResult } from '@/types/admin'
 import { Sparkles, Zap, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 export default function Home() {
+  const router = useRouter()
   const [workflow, setWorkflow] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isRevalidating, setIsRevalidating] = useState(false)
@@ -83,11 +86,31 @@ export default function Home() {
     }
   }
 
-  const handleCreateAutomation = () => {
-    // TODO: Implement automation creation logic
-    toast.success('Creating automation... (This feature will be implemented next!)')
-    console.log('Creating automation for:', workflow)
-    console.log('Validation result:', validationResult)
+  const handleCreateAutomation = async () => {
+    try {
+      // Check authentication
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        toast.error('Please sign in to create automations')
+        router.push(
+          '/login?redirect=/generate-automation&message=Please+sign+in+to+create+automations'
+        )
+        return
+      }
+
+      // Navigate to generation page with workflow description
+      const params = new URLSearchParams({
+        description: workflow.trim(),
+      })
+      router.push(`/generate-automation?${params.toString()}`)
+    } catch (error) {
+      console.error('Error checking authentication:', error)
+      toast.error('Authentication check failed. Please try again.')
+    }
   }
 
   const handleClear = () => {

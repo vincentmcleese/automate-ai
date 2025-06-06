@@ -440,7 +440,13 @@ export function validateSystemPromptData(
   }
 
   if (data.category !== undefined) {
-    const validCategories = ['validation', 'json_generation', 'workflow_analysis', 'custom']
+    const validCategories = [
+      'validation',
+      'json_generation',
+      'workflow_analysis',
+      'image_generation',
+      'custom',
+    ]
     if (!validCategories.includes(data.category)) {
       errors.push('Invalid category. Must be one of: ' + validCategories.join(', '))
     }

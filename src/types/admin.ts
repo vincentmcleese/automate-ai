@@ -1,4 +1,9 @@
-export type PromptCategory = 'validation' | 'json_generation' | 'workflow_analysis' | 'custom'
+export type PromptCategory =
+  | 'validation'
+  | 'json_generation'
+  | 'workflow_analysis'
+  | 'image_generation'
+  | 'custom'
 
 export interface SystemPrompt {
   id: string
@@ -194,4 +199,62 @@ export interface UpdateTrainingDataData {
 export interface SystemPromptWithTrainingData extends SystemPrompt {
   training_data_count?: number
   estimated_tokens?: number
+}
+
+// Automation types
+export interface Automation {
+  id: string
+  user_id: string
+  prompt_id?: string
+  prompt_version?: number
+  user_input: string
+  generated_json: Record<string, unknown>
+  title?: string
+  description?: string
+  status: 'generating' | 'completed' | 'failed'
+  image_url?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateAutomationData {
+  user_input: string
+  title?: string
+  description?: string
+}
+
+export interface GenerateAutomationRequest {
+  workflow_description: string
+}
+
+// Automations overview types
+export interface AutomationUser {
+  id: string
+  email: string
+  name: string
+  avatar_url?: string
+}
+
+export interface AutomationOverview {
+  id: string
+  title: string
+  description: string
+  created_at: string
+  updated_at: string
+  status: 'generating' | 'completed' | 'failed'
+  image_url?: string
+  user_name?: string
+  user_email?: string
+  user_avatar_url?: string
+  user: AutomationUser
+}
+
+export interface AutomationsResponse {
+  automations: AutomationOverview[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    total_pages: number
+  }
 }
