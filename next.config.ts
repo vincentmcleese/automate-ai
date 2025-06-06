@@ -1,6 +1,34 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // Image configuration for external domains
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.in',
+      },
+      {
+        protocol: 'https',
+        hostname: 'supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'supabase.in',
+      },
+      // Add specific pattern for your Supabase project
+      {
+        protocol: 'https',
+        hostname: '**',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
+
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['lucide-react'],
