@@ -1,0 +1,44 @@
+-- First, create a table for tool categories
+CREATE TABLE public.tool_categories (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL UNIQUE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT tool_categories_pkey PRIMARY KEY (id)
+);
+COMMENT ON TABLE public.tool_categories IS 'Stores categories for automation tools, e.g., Communication, CRM.';
+
+-- Next, create the table for the tools themselves
+CREATE TABLE public.tools (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL UNIQUE,
+  category_id uuid NOT NULL,
+  logo_url text NULL,
+  description text NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT tools_pkey PRIMARY KEY (id),
+  CONSTRAINT tools_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.tool_categories(id) ON DELETE CASCADE
+);
+COMMENT ON TABLE public.tools IS 'Stores individual tools that can be selected for automation steps.';
+
+-- Optional: Add some initial data to get you started
+INSERT INTO public.tool_categories (name) VALUES
+('Communication'),
+('CRM'),
+('Email'),
+('File Storage'),
+('Project Management');
+
+INSERT INTO public.tools (name, category_id) VALUES
+('Slack', (SELECT id FROM public.tool_categories WHERE name = 'Communication')),
+('Discord', (SELECT id FROM public.tool_categories WHERE name = 'Communication')),
+('Microsoft Teams', (SELECT id FROM public.tool_categories WHERE name = 'Communication')),
+('Salesforce', (SELECT id FROM public.tool_categories WHERE name = 'CRM')),
+('HubSpot', (SELECT id FROM public.tool_categories WHERE name = 'CRM')),
+('Gmail', (SELECT id FROM public.tool_categories WHERE name = 'Email')),
+('Outlook', (SELECT id FROM public.tool_categories WHERE name = 'Email')),
+('Google Drive', (SELECT id FROM public.tool_categories WHERE name = 'File Storage')),
+('Dropbox', (SELECT id FROM public.tool_categories WHERE name = 'File Storage')),
+('Asana', (SELECT id FROM public.tool_categories WHERE name = 'Project Management')),
+('Jira', (SELECT id FROM public.tool_categories WHERE name = 'Project Management')),
+('Trello', (SELECT id FROM public.tool_categories WHERE name = 'Project Management'));

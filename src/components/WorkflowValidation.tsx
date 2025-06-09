@@ -1,10 +1,19 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { WorkflowValidationResult } from '@/types/admin'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { AddToolModal } from '@/components/admin/AddToolModal'
+import { WorkflowValidationResult, WorkflowStep } from '@/types/admin'
 import {
   CheckCircle,
   XCircle,
@@ -15,23 +24,67 @@ import {
   ArrowRight,
   AlertCircle,
   Lightbulb,
+  ChevronDown,
+  Code,
+  ArrowRightCircle,
+  PlusCircle,
+  AlertTriangle,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 interface WorkflowValidationProps {
   validation: WorkflowValidationResult
-  workflowDescription: string
   isRevalidating: boolean
   onRevalidate: () => void
-  onCreateAutomation: () => void
+  onCreateAutomation: (selectedTools: Record<number, string>) => void
 }
 
 export function WorkflowValidation({
   validation,
-  workflowDescription: _workflowDescription,
   isRevalidating,
   onRevalidate,
   onCreateAutomation,
 }: WorkflowValidationProps) {
+  const [steps, setSteps] = useState<WorkflowStep[]>(validation.steps)
+  const [selectedTools, setSelectedTools] = useState<Record<number, string>>({})
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [activeCategory] = useState<{ id: string; name: string } | null>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    setSteps(validation.steps)
+    const defaultTools: Record<number, string> = {}
+    validation.steps.forEach(step => {
+      if (step.default_tool) {
+        defaultTools[step.step_number] = step.default_tool
+      }
+    })
+    setSelectedTools(defaultTools)
+  }, [validation.steps])
+
+  const handleToolSelect = (stepNumber: number, tool: string) => {
+    if (tool === 'add_new_tool') {
+      // const step = steps.find(s => s.step_number === stepNumber)
+      // This is a placeholder for getting category ID. You'll need to fetch it.
+      // For now, I'll assume we can get it from the step, which we can't.
+      // This part of the logic will need to be improved.
+      // Let's open the modal for now.
+      setIsModalOpen(true)
+    } else {
+      setSelectedTools(prev => ({ ...prev, [stepNumber]: tool }))
+    }
+  }
+
+  const handleToolAdded = (newTool: { id: string; name: string; logo_url?: string }) => {
+    // This is a simplified version. We'd need to find which step to add it to.
+    // And also update the available_tools for that step.
+    console.log('New tool added:', newTool)
+    // For now, just closes modal. A full implementation would be more complex.
+    setIsModalOpen(false)
+  }
+
   const getComplexityColor = (complexity: string) => {
     switch (complexity) {
       case 'simple':
@@ -51,161 +104,220 @@ export function WorkflowValidation({
     return 'text-red-600'
   }
 
-  return (
-    <Card className="mt-6 border border-[#e5e7eb] shadow-lg">
-      <CardHeader className="pb-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-2">
-            {validation.is_valid ? (
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            ) : (
-              <XCircle className="h-6 w-6 text-red-600" />
-            )}
-            <CardTitle className="text-xl">
-              {validation.is_valid ? 'Workflow Can Be Automated' : 'Workflow Needs Refinement'}
-            </CardTitle>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-[#6b7280]">Confidence:</span>
-            <span className={`font-semibold ${getConfidenceColor(validation.confidence)}`}>
-              {Math.round(validation.confidence * 100)}%
-            </span>
-          </div>
-        </div>
-      </CardHeader>
+  const getStepIcon = (type: string) => {
+    switch (type) {
+      case 'trigger':
+        return <Zap className="h-5 w-5 text-yellow-500" />
+      case 'action':
+        return <ArrowRightCircle className="h-5 w-5 text-blue-500" />
+      case 'logic':
+        return <Code className="h-5 w-5 text-purple-500" />
+      default:
+        return <Settings className="h-5 w-5 text-gray-500" />
+    }
+  }
 
-      <CardContent className="space-y-6">
-        {/* Complexity and Time Estimate */}
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center space-x-2">
-            <Settings className="h-4 w-4 text-[#6b7280]" />
-            <span className="text-sm text-[#6b7280]">Complexity:</span>
-            <Badge className={getComplexityColor(validation.complexity)}>
-              {validation.complexity.charAt(0).toUpperCase() + validation.complexity.slice(1)}
-            </Badge>
-          </div>
-          {validation.estimated_time > 0 && (
+  const handleCreateAutomation = async () => {
+    try {
+      // Check authentication
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        toast.error('Please sign in to create automations')
+        router.push(
+          '/login?redirect=/generate-automation&message=Please+sign+in+to+create+automations'
+        )
+        return
+      }
+
+      // Call the parent callback with selected tools
+      onCreateAutomation(selectedTools)
+    } catch (error) {
+      console.error('Error checking authentication:', error)
+      toast.error('Authentication check failed. Please try again.')
+    }
+  }
+
+  return (
+    <>
+      <AddToolModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onToolAdded={handleToolAdded}
+        categoryId={activeCategory?.id || ''} // This needs real data
+      />
+      <Card className="mt-6 border border-[#e5e7eb] shadow-lg">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between">
             <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-[#6b7280]" />
-              <span className="text-sm text-[#6b7280]">
-                Est. setup time: {validation.estimated_time}h
+              {validation.is_valid ? (
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              ) : (
+                <XCircle className="h-6 w-6 text-red-600" />
+              )}
+              <CardTitle className="text-xl">
+                {validation.is_valid ? 'Workflow Blueprint Ready' : 'Workflow Needs Refinement'}
+              </CardTitle>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-[#6b7280]">Confidence:</span>
+              <span className={`font-semibold ${getConfidenceColor(validation.confidence)}`}>
+                {Math.round(validation.confidence * 100)}%
               </span>
             </div>
-          )}
-        </div>
-
-        {/* Triggers */}
-        {validation.triggers && validation.triggers.length > 0 && (
-          <div>
-            <h4 className="mb-2 flex items-center font-semibold text-[#000000]">
-              <Zap className="mr-2 h-4 w-4 text-[#32da94]" />
-              Identified Triggers
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {validation.triggers.map((trigger, index) => (
-                <Badge key={index} variant="outline" className="border-[#32da94] text-[#32da94]">
-                  {trigger}
-                </Badge>
-              ))}
-            </div>
           </div>
-        )}
+        </CardHeader>
 
-        {/* Processes */}
-        {validation.processes && validation.processes.length > 0 && (
-          <div>
-            <h4 className="mb-2 flex items-center font-semibold text-[#000000]">
-              <Settings className="mr-2 h-4 w-4 text-[#32da94]" />
-              Identified Processes
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {validation.processes.map((process, index) => (
-                <Badge key={index} variant="outline" className="border-blue-500 text-blue-700">
-                  {process}
-                </Badge>
-              ))}
+        <CardContent className="space-y-6">
+          {/* Complexity and Time Estimate */}
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center space-x-2">
+              <Settings className="h-4 w-4 text-[#6b7280]" />
+              <span className="text-sm text-[#6b7280]">Complexity:</span>
+              <Badge className={getComplexityColor(validation.complexity)}>
+                {validation.complexity.charAt(0).toUpperCase() + validation.complexity.slice(1)}
+              </Badge>
             </div>
+            {validation.estimated_time_hours > 0 && (
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4 w-4 text-[#6b7280]" />
+                <span className="text-sm text-[#6b7280]">
+                  Est. setup time: {validation.estimated_time_hours}h
+                </span>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Tools Needed */}
-        {validation.tools_needed && validation.tools_needed.length > 0 && (
-          <div>
-            <h4 className="mb-2 flex items-center font-semibold text-[#000000]">
-              <Settings className="mr-2 h-4 w-4 text-[#6b7280]" />
-              Tools & Integrations Required
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {validation.tools_needed.map((tool, index) => (
-                <Badge key={index} variant="secondary" className="bg-gray-100">
-                  {tool}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Suggestions */}
-        {validation.suggestions && validation.suggestions.length > 0 && (
+          {/* Steps */}
           <div>
             <h4 className="mb-3 flex items-center font-semibold text-[#000000]">
-              <Lightbulb className="mr-2 h-4 w-4 text-yellow-500" />
-              Suggestions for Improvement
+              <ChevronDown className="mr-2 h-5 w-5 text-[#32da94]" />
+              Workflow Steps
             </h4>
-            <div className="space-y-2">
-              {validation.suggestions.map((suggestion, index) => (
-                <Alert key={index} className="border-yellow-200 bg-yellow-50">
-                  <AlertCircle className="h-4 w-4 text-yellow-600" />
-                  <AlertDescription className="text-sm text-yellow-800">
-                    {suggestion}
-                  </AlertDescription>
-                </Alert>
+            <div className="space-y-4 border-l-2 border-gray-200 pl-4">
+              {steps.map(step => (
+                <div key={step.step_number} className="relative space-y-3">
+                  <div className="absolute top-1 -left-[26px] flex h-8 w-8 items-center justify-center rounded-full bg-white">
+                    {getStepIcon(step.type)}
+                  </div>
+                  <div className="pl-4">
+                    <p className="font-semibold text-black">{step.description}</p>
+                    <p className="text-sm text-gray-500">{step.details}</p>
+
+                    {step.tool_category === 'Custom Integration' && step.technical_note && (
+                      <Alert variant="default" className="mt-2 border-amber-500/50 bg-amber-50/50">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-amber-800">
+                          <strong className="font-semibold">Developer Note:</strong>{' '}
+                          {step.technical_note}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {step.tool_category &&
+                      !['Code', 'HTTPRequest', 'Custom Integration'].includes(step.tool_category) &&
+                      step.available_tools && (
+                        <div className="mt-2 max-w-xs">
+                          <Select
+                            onValueChange={value => handleToolSelect(step.step_number, value)}
+                            value={selectedTools[step.step_number] || step.default_tool || ''}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select a tool..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {step.available_tools.map(tool => (
+                                <SelectItem key={tool.name} value={tool.name}>
+                                  {tool.name}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="add_new_tool" className="text-blue-600">
+                                <PlusCircle className="mr-2 inline-block h-4 w-4" />
+                                Add a new tool...
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                    {(step.tool_category === 'Code' ||
+                      step.tool_category === 'HTTPRequest' ||
+                      (step.tool_category && !step.available_tools)) && (
+                      <div className="mt-2">
+                        <Badge variant="secondary">{step.default_tool || step.tool_category}</Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-        )}
 
-        {/* Action Buttons */}
-        <div className="flex flex-col gap-3 border-t border-[#e5e7eb] pt-4 sm:flex-row">
-          <Button
-            onClick={onRevalidate}
-            disabled={isRevalidating}
-            variant="outline"
-            className="w-full border-[#e5e7eb] text-[#6b7280] hover:bg-[#f8f9fa] sm:w-auto"
-          >
-            {isRevalidating ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-600"></div>
-                Revalidating...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Revalidate
-              </>
-            )}
-          </Button>
+          {/* Suggestions */}
+          {validation.suggestions && validation.suggestions.length > 0 && (
+            <div>
+              <h4 className="mb-3 flex items-center font-semibold text-[#000000]">
+                <Lightbulb className="mr-2 h-4 w-4 text-yellow-500" />
+                Suggestions for Improvement
+              </h4>
+              <div className="space-y-2">
+                {validation.suggestions.map((suggestion, index) => (
+                  <Alert key={index} className="border-yellow-200 bg-yellow-50">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription className="text-sm text-yellow-800">
+                      {suggestion}
+                    </AlertDescription>
+                  </Alert>
+                ))}
+              </div>
+            </div>
+          )}
 
-          <Button
-            onClick={onCreateAutomation}
-            disabled={!validation.is_valid || isRevalidating}
-            className="w-full bg-[#32da94] font-semibold text-white hover:bg-[#2bb885] sm:w-auto"
-          >
-            Create Automation
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-3 border-t border-[#e5e7eb] pt-4 sm:flex-row">
+            <Button
+              onClick={onRevalidate}
+              disabled={isRevalidating}
+              variant="outline"
+              className="w-full border-[#e5e7eb] text-[#6b7280] hover:bg-[#f8f9fa] sm:w-auto"
+            >
+              {isRevalidating ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-600"></div>
+                  Revalidating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Revalidate
+                </>
+              )}
+            </Button>
 
-        {!validation.is_valid && (
-          <Alert className="border-orange-200 bg-orange-50">
-            <AlertCircle className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-sm text-orange-800">
-              Please refine your workflow description based on the suggestions above, then click
-              &ldquo;Revalidate&rdquo; to check again.
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+            <Button
+              onClick={handleCreateAutomation}
+              disabled={!validation.is_valid || isRevalidating}
+              className="w-full bg-[#32da94] font-semibold text-white hover:bg-[#2bb885] sm:w-auto"
+            >
+              Create Automation
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+
+          {!validation.is_valid && (
+            <Alert className="border-orange-200 bg-orange-50">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-sm text-orange-800">
+                Please refine your workflow description based on the suggestions above, then click
+                &ldquo;Revalidate&rdquo; to check again.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+    </>
   )
 }

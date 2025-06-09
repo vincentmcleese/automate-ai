@@ -3,6 +3,9 @@ import {
   OpenRouterChatResponse,
   OpenRouterError,
   OpenRouterChatMessage,
+  WorkflowValidationResult,
+  WorkflowJSON,
+  OpenRouterModel,
 } from '@/types/admin'
 
 export class OpenRouterClient {
@@ -151,7 +154,7 @@ export class OpenRouterClient {
     workflowDescription: string,
     systemPrompt: string,
     model: string = 'openai/gpt-4o-mini'
-  ): Promise<any> {
+  ): Promise<WorkflowValidationResult> {
     try {
       console.log('Starting workflow validation with model:', model)
 
@@ -197,11 +200,9 @@ export class OpenRouterClient {
           return {
             is_valid: false,
             confidence: 0.1,
-            triggers: [],
-            processes: [],
-            tools_needed: [],
+            estimated_time_hours: 8,
             complexity: 'complex',
-            estimated_time: 8,
+            steps: [],
             suggestions: [
               'The workflow description could not be processed. Please try rephrasing your description more clearly.',
             ],
@@ -213,11 +214,9 @@ export class OpenRouterClient {
       const requiredFields = [
         'is_valid',
         'confidence',
-        'triggers',
-        'processes',
-        'tools_needed',
+        'steps',
         'complexity',
-        'estimated_time',
+        'estimated_time_hours',
         'suggestions',
       ]
       const missingFields = requiredFields.filter(field => !(field in parsedResponse))
@@ -225,22 +224,21 @@ export class OpenRouterClient {
       if (missingFields.length > 0) {
         console.warn('Response missing required fields:', missingFields)
         // Fill in missing fields with defaults
-        const defaults = {
+        const defaults: Partial<WorkflowValidationResult> = {
           is_valid: false,
           confidence: 0.1,
-          triggers: [],
-          processes: [],
-          tools_needed: [],
+          steps: [],
           complexity: 'complex',
-          estimated_time: 8,
+          estimated_time_hours: 8,
           suggestions: [
             'The workflow validation returned incomplete information. Please try again.',
           ],
         }
 
         missingFields.forEach(field => {
-          if (!(field in parsedResponse)) {
-            parsedResponse[field] = defaults[field as keyof typeof defaults]
+          const key = field as keyof WorkflowValidationResult
+          if (!(key in parsedResponse)) {
+            parsedResponse[key] = defaults[key]
           }
         })
       }
@@ -259,10 +257,10 @@ export class OpenRouterClient {
    */
   async generateWorkflowJSON(
     workflowDescription: string,
-    validationResults: any,
+    validationResults: WorkflowValidationResult,
     systemPrompt: string,
     model: string = 'openai/gpt-4o-mini'
-  ): Promise<any> {
+  ): Promise<WorkflowJSON> {
     const maxRetries = 2
     let lastError: Error | null = null
 
@@ -287,7 +285,7 @@ export class OpenRouterClient {
         }
 
         // Try to parse as JSON
-        let parsedJson: any
+        let parsedJson: WorkflowJSON
         try {
           parsedJson = JSON.parse(jsonString)
         } catch (parseError) {
@@ -352,7 +350,7 @@ export class OpenRouterClient {
   /**
    * Get available models from OpenRouter
    */
-  async getAvailableModels(): Promise<any[]> {
+  async getAvailableModels(): Promise<OpenRouterModel[]> {
     try {
       const response = await fetch(`${this.baseUrl}/models`, {
         headers: {
@@ -375,7 +373,7 @@ export class OpenRouterClient {
   /**
    * Get account credits/usage information
    */
-  async getCredits(): Promise<any> {
+  async getCredits(): Promise<{ limit: number; usage: number } | null> {
     try {
       const response = await fetch(`${this.baseUrl}/auth/key`, {
         headers: {
@@ -414,17 +412,17 @@ export const openRouterClient = {
     workflowDescription: string,
     systemPrompt: string,
     model: string = 'openai/gpt-4o-mini'
-  ): Promise<any> {
+  ): Promise<WorkflowValidationResult> {
     const client = getOpenRouterClient()
     return client.validateWorkflow(workflowDescription, systemPrompt, model)
   },
 
   async generateWorkflowJSON(
     workflowDescription: string,
-    validationResults: any,
+    validationResults: WorkflowValidationResult,
     systemPrompt: string,
     model: string = 'openai/gpt-4o-mini'
-  ): Promise<any> {
+  ): Promise<WorkflowJSON> {
     const client = getOpenRouterClient()
     return client.generateWorkflowJSON(workflowDescription, validationResults, systemPrompt, model)
   },
@@ -437,7 +435,7 @@ export const openRouterClient = {
     return client.generateContent(systemPrompt, model)
   },
 
-  async getAvailableModels(): Promise<any[]> {
+  async getAvailableModels(): Promise<OpenRouterModel[]> {
     const client = getOpenRouterClient()
     return client.getAvailableModels()
   },
@@ -447,7 +445,7 @@ export const openRouterClient = {
     return client.testModel(modelId)
   },
 
-  async getCredits(): Promise<any> {
+  async getCredits(): Promise<{ limit: number; usage: number } | null> {
     const client = getOpenRouterClient()
     return client.getCredits()
   },

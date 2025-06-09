@@ -33,18 +33,22 @@ export async function GET(request: NextRequest) {
         // Update our database with latest model information
         for (const model of latestModels) {
           if (isValidModelId(model.id)) {
+            const modelWithPricing = model as any // OpenRouter API may have additional properties
             await supabase.from('openrouter_models').upsert(
               {
                 id: model.id,
                 name: model.name,
                 description: model.description,
                 context_length: model.context_length,
-                pricing_prompt: model.pricing?.prompt ? parseFloat(model.pricing.prompt) : null,
-                pricing_completion: model.pricing?.completion
-                  ? parseFloat(model.pricing.completion)
+                pricing_prompt: modelWithPricing.pricing?.prompt
+                  ? parseFloat(modelWithPricing.pricing.prompt)
                   : null,
-                supports_function_calling: model.top_provider?.supports_function_calling || false,
-                supports_streaming: model.top_provider?.supports_streaming !== false,
+                pricing_completion: modelWithPricing.pricing?.completion
+                  ? parseFloat(modelWithPricing.pricing.completion)
+                  : null,
+                supports_function_calling:
+                  modelWithPricing.top_provider?.supports_function_calling || false,
+                supports_streaming: modelWithPricing.top_provider?.supports_streaming !== false,
               },
               {
                 onConflict: 'id',

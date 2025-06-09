@@ -3,6 +3,15 @@ import { createClient } from '@/lib/supabase/server'
 import { openRouterClient } from '@/lib/openrouter/client'
 import { WorkflowValidationResult } from '@/types/admin'
 
+// Define the categories that are considered 'selectable' by the user
+const SELECTABLE_TOOL_CATEGORIES = [
+  'Communication',
+  'CRM',
+  'Email',
+  'File Storage',
+  'Project Management',
+]
+
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
@@ -294,9 +303,97 @@ export async function POST(request: NextRequest) {
         defaultModel
       )
 
+      console.log(
+        'DEBUG: Raw validation result from AI:',
+        JSON.stringify(validationResult, null, 2)
+      )
+
+      // Augment the result with available tools for each step
+      if (validationResult && validationResult.steps) {
+        // Fetch all selectable tools at once to avoid multiple queries
+        const { data: allTools, error: toolsError } = await supabase
+          .from('tools')
+          .select('name, logo_url, tool_categories(name)')
+          .in(
+            'category_id',
+            (
+              await supabase
+                .from('tool_categories')
+                .select('id')
+                .in('name', SELECTABLE_TOOL_CATEGORIES)
+            ).data?.map(c => c.id) || []
+          )
+          .eq('is_active', true)
+
+        if (toolsError) {
+          console.error('DEBUG: Error fetching tools from Supabase:', toolsError)
+          // Proceed without tool suggestions if this fails
+        } else {
+          console.log('DEBUG: Fetched tools from Supabase:', allTools)
+
+          // Debug: Check the structure of the first tool to understand the data format
+          if (allTools && allTools.length > 0) {
+            console.log('DEBUG: First tool structure:', JSON.stringify(allTools[0], null, 2))
+            console.log('DEBUG: tool_categories type:', typeof allTools[0].tool_categories)
+            console.log(
+              'DEBUG: tool_categories isArray:',
+              Array.isArray(allTools[0].tool_categories)
+            )
+          }
+
+          // Group tools by category for easy lookup
+          const toolsByCategory = (allTools as any[]).reduce(
+            (acc, tool) => {
+              // Handle both array and object formats from Supabase
+              let categoryName: string | undefined
+              if (Array.isArray(tool.tool_categories) && tool.tool_categories.length > 0) {
+                categoryName = tool.tool_categories[0]?.name
+              } else if (tool.tool_categories && typeof tool.tool_categories === 'object') {
+                categoryName = tool.tool_categories.name
+              }
+
+              console.log(
+                `DEBUG: Processing tool "${tool.name}": categoryName="${categoryName}", tool_categories=`,
+                tool.tool_categories
+              )
+
+              if (categoryName) {
+                if (!acc[categoryName]) {
+                  acc[categoryName] = []
+                }
+                acc[categoryName].push({
+                  name: tool.name,
+                  logo_url: tool.logo_url || undefined,
+                })
+                console.log(`DEBUG: Added tool "${tool.name}" to category "${categoryName}"`)
+              } else {
+                console.log(`DEBUG: Skipped tool "${tool.name}" - no valid category found`)
+              }
+              return acc
+            },
+            {} as Record<string, { name: string; logo_url?: string }[]>
+          )
+
+          console.log('DEBUG: Tools grouped by category:', toolsByCategory)
+
+          // Add available_tools to each step
+          for (const step of validationResult.steps) {
+            if (step.tool_category && SELECTABLE_TOOL_CATEGORIES.includes(step.tool_category)) {
+              step.available_tools = toolsByCategory[step.tool_category] || []
+            }
+          }
+        }
+      }
+
+      console.log(
+        'DEBUG: Final validation result sent to frontend:',
+        JSON.stringify(validationResult, null, 2)
+      )
+
       console.log('OpenRouter validation successful:', {
         isValid: validationResult.is_valid,
         confidence: validationResult.confidence,
+        stepsCount: validationResult.steps?.length,
       })
     } catch (error) {
       console.error('OpenRouter validation failed with error:', error)

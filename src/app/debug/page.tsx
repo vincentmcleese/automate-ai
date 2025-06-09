@@ -5,25 +5,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react'
+import { AdminSetting, OpenRouterModel } from '@/types/admin'
 
-interface DebugResult {
-  supabase: boolean
-  systemPrompt: boolean
-  openRouterKey: boolean
-  openRouterTest: boolean
-  testResult?: any
+type DebugResult = {
+  debug?: {
+    supabase?: boolean
+    systemPrompt?: boolean
+    openRouterKey?: boolean
+    openRouterTest?: boolean
+    testResult?: {
+      isValid: boolean
+      confidence: number
+    }
+    error?: string
+  }
+  settings?: AdminSetting[]
+  models?: OpenRouterModel[]
   error?: string
 }
 
 export default function DebugPage() {
   const [isRunning, setIsRunning] = useState(false)
-  const [debugResult, setDebugResult] = useState<DebugResult | null>(null)
+  const [result, setResult] = useState<DebugResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const runDiagnostics = async () => {
     setIsRunning(true)
     setError(null)
-    setDebugResult(null)
+    setResult(null)
 
     try {
       const response = await fetch('/api/workflow/validate', {
@@ -39,10 +48,10 @@ export default function DebugPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setDebugResult(data.debug || null)
+        setResult(data.debug || null)
         setError(data.debug?.error || 'Diagnostics failed')
       } else {
-        setDebugResult(data.debug)
+        setResult(data.debug)
       }
     } catch (err) {
       console.error('Error running diagnostics:', err)
@@ -103,7 +112,7 @@ export default function DebugPage() {
             </Alert>
           )}
 
-          {debugResult && (
+          {result && (
             <Card className="border-[#e5e7eb]">
               <CardHeader>
                 <CardTitle>Diagnostic Results</CardTitle>
@@ -112,37 +121,37 @@ export default function DebugPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Supabase Connection</span>
-                    <StatusIcon status={debugResult.supabase} />
+                    <StatusIcon status={result.debug?.supabase} />
                   </div>
 
                   <div className="flex items-center justify-between">
                     <span className="font-medium">System Prompt Retrieval</span>
-                    <StatusIcon status={debugResult.systemPrompt} />
+                    <StatusIcon status={result.debug?.systemPrompt} />
                   </div>
 
                   <div className="flex items-center justify-between">
                     <span className="font-medium">OpenRouter API Key</span>
-                    <StatusIcon status={debugResult.openRouterKey} />
+                    <StatusIcon status={result.debug?.openRouterKey} />
                   </div>
 
                   <div className="flex items-center justify-between">
                     <span className="font-medium">OpenRouter Test Validation</span>
-                    <StatusIcon status={debugResult.openRouterTest} />
+                    <StatusIcon status={result.debug?.openRouterTest} />
                   </div>
 
-                  {debugResult.testResult && (
+                  {result.debug?.testResult && (
                     <div className="mt-4 rounded-md bg-green-50 p-3">
                       <h4 className="font-medium text-green-800">Test Validation Result:</h4>
                       <pre className="mt-2 text-sm text-green-700">
-                        {JSON.stringify(debugResult.testResult, null, 2)}
+                        {JSON.stringify(result.debug.testResult, null, 2)}
                       </pre>
                     </div>
                   )}
 
-                  {debugResult.error && (
+                  {result.debug?.error && (
                     <div className="mt-4 rounded-md bg-red-50 p-3">
                       <h4 className="font-medium text-red-800">Error Details:</h4>
-                      <p className="mt-1 text-sm text-red-700">{debugResult.error}</p>
+                      <p className="mt-1 text-sm text-red-700">{result.debug.error}</p>
                     </div>
                   )}
                 </div>

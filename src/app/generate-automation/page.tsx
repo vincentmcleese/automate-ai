@@ -32,13 +32,7 @@ function GenerateAutomationContent() {
       setStatus('generating')
       setProgress(10)
 
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setProgress(prev => {
-          if (prev < 80) return prev + 10
-          return prev
-        })
-      }, 500)
+      console.log('Starting automation generation...')
 
       const response = await fetch('/api/automations/generate', {
         method: 'POST',
@@ -50,28 +44,108 @@ function GenerateAutomationContent() {
         }),
       })
 
-      clearInterval(progressInterval)
-
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to generate automation')
       }
 
       const data = await response.json()
+      console.log('Automation generation started:', data)
+
+      // Set initial automation data
       setAutomation(data.automation)
-      setStatus('completed')
-      setProgress(100)
-      toast.success('Automation generated successfully!')
+      setProgress(30)
+
+      // Start polling for status updates
+      console.log('Starting status polling for automation:', data.automation.id)
+      await pollForAutomationStatus(data.automation.id)
     } catch (error) {
       console.error('Error generating automation:', error)
       setError(error instanceof Error ? error.message : 'Unknown error occurred')
       setStatus('failed')
       setProgress(0)
+      setLoading(false) // Make sure to stop loading on error
       toast.error('Failed to generate automation')
-    } finally {
-      setLoading(false)
     }
+    // Note: Don't set loading to false here - let polling handle it
   }, [workflowDescription])
+
+  // Poll for automation status updates
+  const pollForAutomationStatus = async (automationId: string) => {
+    const maxAttempts = 60 // Maximum 5 minutes of polling (60 * 5 seconds)
+    let attempts = 0
+
+    const poll = async (): Promise<void> => {
+      try {
+        attempts++
+        console.log(`Polling attempt ${attempts} for automation ${automationId}`)
+
+        const statusResponse = await fetch(`/api/automations/${automationId}/status`)
+        if (!statusResponse.ok) {
+          throw new Error('Failed to check automation status')
+        }
+
+        const statusData = await statusResponse.json()
+        console.log('Status update:', statusData)
+
+        // Update progress based on status
+        if (statusData.status === 'generating') {
+          const progressValue = Math.min(30 + attempts * 2, 90) // Gradually increase to 90%
+          setProgress(progressValue)
+          // Keep loading and generating status
+          setLoading(true)
+          setStatus('generating')
+        } else if (statusData.status === 'completed') {
+          setProgress(100)
+          setStatus('completed')
+          setLoading(false) // Stop loading when completed
+
+          // Fetch the complete automation data
+          const automationResponse = await fetch(`/api/automations/${automationId}`)
+          if (automationResponse.ok) {
+            const automationData = await automationResponse.json()
+            setAutomation(automationData)
+          }
+
+          toast.success('Automation generated successfully!')
+          return // Stop polling
+        } else if (statusData.status === 'failed') {
+          setStatus('failed')
+          setProgress(0)
+          setLoading(false) // Stop loading when failed
+          setError(statusData.description || 'Generation failed')
+          toast.error('Automation generation failed')
+          return // Stop polling
+        }
+
+        // Continue polling if still generating and haven't exceeded max attempts
+        if (statusData.status === 'generating' && attempts < maxAttempts) {
+          setTimeout(() => poll(), 5000) // Poll every 5 seconds
+        } else if (attempts >= maxAttempts) {
+          // Timeout after max attempts
+          console.error('Polling timeout after', maxAttempts, 'attempts')
+          setStatus('failed')
+          setLoading(false) // Stop loading on timeout
+          setError('Generation timeout - please try again')
+          toast.error('Generation timeout - please try again')
+        }
+      } catch (error) {
+        console.error('Error polling automation status:', error)
+        if (attempts < maxAttempts) {
+          // Retry after a longer delay on error
+          setTimeout(() => poll(), 10000)
+        } else {
+          setStatus('failed')
+          setLoading(false) // Stop loading on error
+          setError('Unable to check generation status')
+          toast.error('Unable to check generation status')
+        }
+      }
+    }
+
+    // Start polling
+    setTimeout(() => poll(), 2000) // Initial delay of 2 seconds
+  }
 
   useEffect(() => {
     if (!workflowDescription) {
@@ -203,9 +277,9 @@ function GenerateAutomationContent() {
                 <div className="flex items-center justify-center space-x-2 text-[#6b7280]">
                   <RefreshCw className="h-4 w-4 animate-spin" />
                   <span className="text-sm">
-                    {progress < 30 && 'Analyzing workflow description...'}
-                    {progress >= 30 && progress < 60 && 'Processing with AI model...'}
-                    {progress >= 60 && progress < 90 && 'Generating JSON structure...'}
+                    {progress < 30 && 'Initializing automation generation...'}
+                    {progress >= 30 && progress < 60 && 'AI is processing your workflow...'}
+                    {progress >= 60 && progress < 90 && 'Generating complex JSON structure...'}
                     {progress >= 90 && 'Finalizing automation...'}
                   </span>
                 </div>

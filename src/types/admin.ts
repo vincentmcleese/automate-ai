@@ -11,7 +11,7 @@ export interface SystemPrompt {
   description?: string
   category: PromptCategory
   prompt_content: string
-  variables: Record<string, any>
+  variables: Record<string, unknown>
   model_id?: string // OpenRouter model ID to use for this prompt
   is_active: boolean
   version: number
@@ -136,14 +136,23 @@ export interface OpenRouterError {
 }
 
 // Workflow processing types
+export interface WorkflowStep {
+  step_number: number
+  description: string
+  type: 'trigger' | 'action' | 'logic'
+  tool_category: string | null
+  default_tool: string | null
+  details: string
+  technical_note?: string | null
+  available_tools?: { name: string; logo_url?: string }[]
+}
+
 export interface WorkflowValidationResult {
   is_valid: boolean
   confidence: number
-  triggers: string[]
-  processes: string[]
-  tools_needed: string[]
+  estimated_time_hours: number
   complexity: 'simple' | 'moderate' | 'complex'
-  estimated_time: number
+  steps: WorkflowStep[]
   suggestions: string[]
 }
 

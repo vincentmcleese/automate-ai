@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { openRouterClient } from '@/lib/openrouter/client'
 
 // POST /api/automations/[id]/generate-image - Generate image for automation
@@ -148,9 +149,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const imageBlob = await fetch(imageUrl).then(r => r.blob())
     const fileName = `automation-${automation.id}-${Date.now()}.png`
 
-    // Upload to Supabase Storage
-    console.log('📤 Uploading image to Supabase Storage...')
-    const { error: uploadError } = await supabase.storage
+    // Create service role client for storage upload (bypasses RLS)
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_SERVICE_ROLE_SUPABASE_KEY!
+    )
+
+    // Upload to Supabase Storage using service role
+    console.log('📤 Uploading image to Supabase Storage with service role...')
+    const { error: uploadError } = await serviceSupabase.storage
       .from('automation-images')
       .upload(fileName, imageBlob, {
         contentType: 'image/png',
@@ -165,15 +172,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       )
     }
 
-    // Get the public URL
-    const { data: publicUrlData } = supabase.storage
+    // Get the public URL using the service client
+    const { data: publicUrlData } = serviceSupabase.storage
       .from('automation-images')
       .getPublicUrl(fileName)
 
     const storedImageUrl = publicUrlData.publicUrl
     console.log('✅ Image stored at:', storedImageUrl)
 
-    // Update automation with image URL
+    // Update automation with image URL using regular client
     const { data: updatedAutomation, error: updateError } = await supabase
       .from('automations')
       .update({ image_url: storedImageUrl })

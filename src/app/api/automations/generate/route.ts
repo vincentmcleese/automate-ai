@@ -15,8 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const body: GenerateAutomationRequest = await request.json()
-    const { workflow_description } = body
+    const { workflow_description }: GenerateAutomationRequest = await request.json()
 
     if (!workflow_description || workflow_description.trim().length === 0) {
       return NextResponse.json({ error: 'Workflow description is required' }, { status: 400 })
@@ -41,24 +40,6 @@ export async function POST(request: NextRequest) {
       console.error('Error fetching json_generation prompt:', promptError)
       return NextResponse.json({ error: 'JSON generation prompt not available' }, { status: 500 })
     }
-
-    // Combine prompt with training data
-    let fullPrompt = prompt.prompt_content
-    if (prompt.system_prompt_training_data && prompt.system_prompt_training_data.length > 0) {
-      const trainingContent = prompt.system_prompt_training_data
-        .map((td: any) => `## ${td.title}\n\n${td.content}`)
-        .join('\n\n')
-      fullPrompt = `${prompt.prompt_content}\n\n${trainingContent}`
-    }
-
-    // Replace template variables in prompt
-    const processedPrompt = fullPrompt.replace(
-      /\{\{workflow_description\}\}/g,
-      workflow_description
-    )
-
-    // Determine model to use
-    const modelId = prompt.model_id || 'openai/gpt-4o-mini' // fallback to default
 
     // Create initial automation record with "generating" status
     const { data: automation, error: createError } = await supabase
@@ -87,98 +68,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create automation' }, { status: 500 })
     }
 
-    try {
-      // Generate JSON using OpenRouter
-      console.log(`Starting JSON generation for user ${user.id} with model ${modelId}`)
-      console.log(`Workflow description length: ${workflow_description.length} characters`)
-      console.log(`Full prompt length: ${processedPrompt.length} characters`)
+    // Return immediately with the automation record
+    // Processing will continue in the background
+    const response = NextResponse.json({
+      success: true,
+      automation: automation,
+      message: 'Generation started. The automation will be processed in the background.',
+    })
 
-      const generatedContent = await openRouterClient.generateWorkflowJSON(
-        workflow_description,
-        {}, // No validation results needed for direct generation
-        processedPrompt,
-        modelId
-      )
-
-      console.log('JSON generation completed successfully')
-      console.log('Generated JSON structure:', Object.keys(generatedContent))
-
-      // The generateWorkflowJSON method already returns parsed JSON
-      const generatedJson = generatedContent
-
-      // Update automation with generated JSON
-      const { data: updatedAutomation, error: updateError } = await supabase
-        .from('automations')
-        .update({
-          generated_json: generatedJson,
-          status: 'completed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', automation.id)
-        .select()
-        .single()
-
-      if (updateError) {
-        console.error('Error updating automation:', updateError)
-        return NextResponse.json({ error: 'Failed to save generated JSON' }, { status: 500 })
-      }
-
-      console.log('Automation updated successfully:', updatedAutomation.id)
-
-      // Generate image for the automation asynchronously (don't wait for it)
-      const protocol = request.headers.get('x-forwarded-proto') || 'http'
-      const host = request.headers.get('host') || 'localhost:3001'
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `${protocol}://${host}`
-      const imageGenUrl = `${baseUrl}/api/automations/${updatedAutomation.id}/generate-image`
-      console.log('Triggering image generation at:', imageGenUrl)
-
-      fetch(imageGenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-        .then(response => {
-          if (response.ok) {
-            console.log(
-              'Image generation triggered successfully for automation:',
-              updatedAutomation.id
-            )
-          } else {
-            console.error('Image generation request failed with status:', response.status)
-          }
-        })
-        .catch(error => {
-          console.error('Failed to generate automation image:', error)
-          // Don't fail the main automation creation if image generation fails
-        })
-
-      return NextResponse.json({
-        success: true,
-        automation: updatedAutomation,
-      })
-    } catch (aiError) {
-      console.error('Error generating automation:', aiError)
-
+    // Start background processing (don't await this)
+    processAutomationInBackground(
+      automation.id,
+      workflow_description,
+      prompt.model_id || 'openai/gpt-4o-mini',
+      process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
+    ).catch(async (error: unknown) => {
+      console.error('Background processing error:', error)
       // Update automation with failed status
-      await supabase
-        .from('automations')
-        .update({
-          status: 'failed',
-          description: aiError instanceof Error ? aiError.message : 'Unknown error occurred',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', automation.id)
+      try {
+        await supabase
+          .from('automations')
+          .update({
+            status: 'failed',
+            description: error instanceof Error ? error.message : 'Background processing failed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', automation.id)
+        console.log('Updated automation status to failed')
+      } catch (updateError) {
+        console.error('Failed to update automation status:', updateError)
+      }
+    })
 
-      return NextResponse.json(
-        {
-          error: 'Failed to generate automation',
-          details: aiError instanceof Error ? aiError.message : 'Unknown error',
-          automation_id: automation.id,
-        },
-        { status: 500 }
-      )
-    }
+    return response
   } catch (error) {
     console.error('Error in automation generation:', error)
     return NextResponse.json(
@@ -188,5 +110,109 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     )
+  }
+}
+
+// Background processing function
+async function processAutomationInBackground(
+  automationId: string,
+  workflowDescription: string,
+  modelId: string,
+  baseUrl: string
+) {
+  let supabase
+  try {
+    supabase = await createClient()
+  } catch (error) {
+    console.error('Failed to create Supabase client for background processing:', error)
+    return // Cannot proceed
+  }
+
+  try {
+    console.log(`Starting background processing for automation ${automationId}`)
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('AI generation timeout after 50 seconds')), 50000)
+    )
+
+    const { data: promptData, error: promptError } = await supabase
+      .from('system_prompts')
+      .select('prompt_content')
+      .eq('name', 'json_generation')
+      .single()
+
+    if (promptError || !promptData) {
+      throw new Error(`Failed to retrieve JSON generation prompt: ${promptError?.message}`)
+    }
+
+    const processedPrompt = promptData.prompt_content.replace(
+      '{{workflow_description}}',
+      workflowDescription
+    )
+
+    // Race the generation against a timeout
+    const generatedContent = await Promise.race([
+      openRouterClient.generateWorkflowJSON(
+        workflowDescription,
+        {
+          is_valid: true,
+          confidence: 1,
+          estimated_time_hours: 0,
+          complexity: 'simple',
+          steps: [],
+          suggestions: [],
+        },
+        processedPrompt,
+        modelId
+      ),
+      timeoutPromise,
+    ])
+
+    await supabase
+      .from('automations')
+      .update({
+        generated_json: generatedContent,
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', automationId)
+
+    console.log(`Successfully completed automation ${automationId}`)
+
+    // Generate image for the automation asynchronously (don't wait for it)
+    const imageGenUrl = `${baseUrl}/api/automations/${automationId}/generate-image`
+
+    console.log('Triggering image generation at:', imageGenUrl)
+
+    // No need to await, just fire and forget
+    fetch(imageGenUrl, { method: 'POST' })
+      .then(res => {
+        if (res.ok) {
+          console.log('Image generation triggered successfully for automation:', automationId)
+        } else {
+          res.json().then(err => {
+            console.error(`Failed to trigger image generation for automation ${automationId}:`, err)
+          })
+        }
+      })
+      .catch(err => {
+        console.error(
+          `Error triggering image generation fetch for automation ${automationId}:`,
+          err
+        )
+      })
+
+    console.log(`Background processing completed successfully for automation ${automationId}`)
+  } catch (error) {
+    console.error(`Background processing failed for automation ${automationId}:`, error)
+    if (supabase) {
+      await supabase
+        .from('automations')
+        .update({
+          status: 'failed',
+          description: `Background processing error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        })
+        .eq('id', automationId)
+    }
   }
 }
