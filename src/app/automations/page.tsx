@@ -202,7 +202,7 @@ export default function AutomationsPage() {
                 <Card
                   key={automation.id}
                   className="group cursor-pointer border-[#e5e7eb] transition-all duration-200 hover:shadow-lg"
-                  onClick={() => router.push(`/generate-automation?id=${automation.id}`)}
+                  onClick={() => router.push(`/automations/${automation.id}`)}
                 >
                   {/* Image Header */}
                   {automation.image_url && (
@@ -251,10 +251,22 @@ export default function AutomationsPage() {
                         </div>
                       </div>
                       <Badge
-                        variant="secondary"
-                        className="border-green-200 bg-green-100 text-green-800"
+                        variant={
+                          automation.status === 'completed'
+                            ? 'default'
+                            : automation.status === 'failed'
+                              ? 'destructive'
+                              : 'secondary'
+                        }
+                        className={
+                          automation.status === 'completed'
+                            ? 'border-green-200 bg-green-100 text-green-800'
+                            : automation.status === 'failed'
+                              ? 'border-red-200 bg-red-100 text-red-800'
+                              : 'border-blue-200 bg-blue-100 text-blue-800'
+                        }
                       >
-                        Completed
+                        {automation.status.charAt(0).toUpperCase() + automation.status.slice(1)}
                       </Badge>
                     </div>
                   </CardContent>
