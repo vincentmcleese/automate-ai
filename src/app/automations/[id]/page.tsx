@@ -77,24 +77,19 @@ async function AutomationContent({ params }: { params: Promise<{ id: string }> }
                 <BookOpen className="h-4 w-4" />
                 <span>Guide (coming soon)</span>
               </Button>
-              <Badge
-                variant={
-                  automation.status === 'completed'
-                    ? 'default'
-                    : automation.status === 'failed'
-                      ? 'destructive'
-                      : 'secondary'
-                }
-                className={
-                  automation.status === 'completed'
-                    ? 'border-green-200 bg-green-100 text-green-800'
-                    : automation.status === 'failed'
-                      ? 'border-red-200 bg-red-100 text-red-800'
-                      : 'border-blue-200 bg-blue-100 text-blue-800'
-                }
+              <Button
+                asChild
+                className="bg-black text-white hover:bg-gray-800"
+                title="book a call with an AI automation expert"
               >
-                {automation.status.charAt(0).toUpperCase() + automation.status.slice(1)}
-              </Badge>
+                <Link
+                  href="https://www.ghostteam.ai/begin?utm_source=automation"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Help me implement
+                </Link>
+              </Button>
             </div>
           </div>
 
