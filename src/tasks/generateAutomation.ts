@@ -8,11 +8,20 @@ type AutomationMetadata = {
   tags: string[]
 }
 
+type SystemPromptInfo = {
+  content: string
+  id: string
+  version: number
+}
+
 // Helper to fetch the active system prompt from the database
-async function getSystemPrompt(supabase: SupabaseClient, promptName: string): Promise<string> {
+async function getSystemPrompt(
+  supabase: SupabaseClient,
+  promptName: string
+): Promise<SystemPromptInfo> {
   const { data: prompt, error } = await supabase
     .from('system_prompts')
-    .select('prompt_content')
+    .select('id, prompt_content, version')
     .eq('name', promptName)
     .order('version', { ascending: false })
     .limit(1)
@@ -21,18 +30,18 @@ async function getSystemPrompt(supabase: SupabaseClient, promptName: string): Pr
   if (error || !prompt) {
     throw new Error(`Could not find system prompt: ${promptName}`)
   }
-  return (prompt as { prompt_content: string }).prompt_content
+  return { content: prompt.prompt_content, id: prompt.id, version: prompt.version }
 }
 
 // Generates metadata by calling the 'metadata_generation' prompt
 async function generateMetadata(
   supabase: SupabaseClient,
   userInput: string,
-  tools: string[]
+  tools: string[],
+  promptInfo: SystemPromptInfo
 ): Promise<AutomationMetadata> {
   const openRouterClient = getOpenRouterClient()
-  const promptTemplate = await getSystemPrompt(supabase, 'metadata_generation')
-  const prompt = promptTemplate
+  const prompt = promptInfo.content
     .replace('{{user_input}}', userInput)
     .replace('{{tools}}', tools.join(', ') || 'None')
 
@@ -43,11 +52,11 @@ async function generateMetadata(
 async function generateWorkflow(
   supabase: SupabaseClient,
   userInput: string,
-  tools: string[]
+  tools: string[],
+  promptInfo: SystemPromptInfo
 ): Promise<object> {
   const openRouterClient = getOpenRouterClient()
-  const promptTemplate = await getSystemPrompt(supabase, 'json_generation')
-  const prompt = promptTemplate
+  const prompt = promptInfo.content
     .replace('{{workflow_description}}', userInput)
     .replace('{{tools}}', tools.join(', ') || 'None')
 
@@ -80,10 +89,14 @@ export async function triggerAutomationGeneration(
   const uniqueToolNames = Array.from(new Set(Object.values(selectedTools)))
 
   try {
-    // Run both AI generation tasks in parallel
+    // Fetch prompts first to get their IDs and versions
+    const metadataPromptInfo = await getSystemPrompt(supabase, 'metadata_generation')
+    const workflowPromptInfo = await getSystemPrompt(supabase, 'json_generation')
+
+    // Run AI generation tasks in parallel
     const results = await Promise.allSettled([
-      generateMetadata(supabase, userInput, uniqueToolNames),
-      generateWorkflow(supabase, userInput, uniqueToolNames),
+      generateMetadata(supabase, userInput, uniqueToolNames, metadataPromptInfo),
+      generateWorkflow(supabase, userInput, uniqueToolNames, workflowPromptInfo),
       getToolIds(supabase, uniqueToolNames),
     ])
 
@@ -113,6 +126,9 @@ export async function triggerAutomationGeneration(
         tags,
         generated_json: generated_json,
         status: 'completed',
+        // Now including the prompt info
+        prompt_id: workflowPromptInfo.id,
+        prompt_version: workflowPromptInfo.version,
       })
       .eq('id', automationId)
 

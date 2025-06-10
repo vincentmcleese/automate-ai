@@ -42,6 +42,10 @@ export async function POST(request: Request) {
       user_id: user.id,
       user_input: userInput,
       status: 'generating', // Set status to 'generating' as per user feedback
+      // Capture user metadata at the time of creation
+      user_email: user.email,
+      user_name: user.user_metadata.full_name,
+      user_avatar_url: user.user_metadata.avatar_url,
       // Title, description, etc., will be populated by the background task
     })
     .select('id')
