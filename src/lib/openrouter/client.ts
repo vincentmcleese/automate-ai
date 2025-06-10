@@ -112,34 +112,27 @@ export class OpenRouterClient {
     const model = 'mistralai/mistral-7b-instruct:free'
     const rawContent = await this.callApi(prompt, model)
     try {
-      let jsonString = rawContent
+      // Find the first '{' and the last '}' to isolate the JSON object.
+      // This is more robust against conversational text or variations in markdown fences.
+      const jsonStart = rawContent.indexOf('{')
+      const jsonEnd = rawContent.lastIndexOf('}')
 
-      // First, try to extract JSON from a markdown code block
-      const markdownMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
-      if (markdownMatch && markdownMatch[1]) {
-        jsonString = markdownMatch[1]
-      } else {
-        // If no markdown block, find the first and last curly brace
-        const jsonStart = rawContent.indexOf('{')
-        const jsonEnd = rawContent.lastIndexOf('}')
-        if (jsonStart !== -1 && jsonEnd > jsonStart) {
-          jsonString = rawContent.substring(jsonStart, jsonEnd + 1)
-        }
+      if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
+        throw new Error('Could not find a valid JSON object in the AI response.')
       }
 
+      let jsonString = rawContent.substring(jsonStart, jsonEnd + 1)
+
       // Clean common smart quotes
-      let cleanedJsonString = jsonString.replace(/”|“/g, '"')
+      jsonString = jsonString.replace(/”|“/g, '"')
 
       // Escape unescaped double quotes inside n8n expressions {{...}}
-      cleanedJsonString = cleanedJsonString.replace(
-        /\{\{([\s\S]+?)\}\}/g,
-        (match, innerContent) => {
-          const fixedInnerContent = innerContent.replace(/"/g, '\\"')
-          return `{{${fixedInnerContent}}}`
-        }
-      )
+      jsonString = jsonString.replace(/\{\{([\s\S]+?)\}\}/g, (match, innerContent) => {
+        const fixedInnerContent = innerContent.replace(/"/g, '\\"')
+        return `{{${fixedInnerContent}}}`
+      })
 
-      const parsedJson: unknown = JSON.parse(cleanedJsonString)
+      const parsedJson = JSON.parse(jsonString)
 
       // Final, most important step: Remove the connections array.
       // n8n will recalculate them on import, which is more reliable
@@ -149,8 +142,11 @@ export class OpenRouterClient {
       }
 
       return parsedJson
-    } catch {
+    } catch (error) {
       console.error('Failed to parse generated JSON. Raw content:', rawContent)
+      if (error instanceof SyntaxError) {
+        throw new Error(`The AI returned invalid JSON: ${error.message}`)
+      }
       throw new Error('The AI returned an invalid or unrecoverable JSON format during generation.')
     }
   }
