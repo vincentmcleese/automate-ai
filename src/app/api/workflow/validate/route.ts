@@ -84,13 +84,18 @@ export async function POST(request: NextRequest) {
 
         const toolsByCategory = (allTools as Tool[]).reduce(
           (acc, tool) => {
-            if (tool.tool_categories) {
-              for (const category of tool.tool_categories) {
-                const categoryName = category.name
-                if (categoryName) {
-                  if (!acc[categoryName]) acc[categoryName] = []
-                  acc[categoryName].push({ name: tool.name, logo_url: tool.logo_url ?? undefined })
-                }
+            // Normalize tool_categories to always be an array
+            const categories = Array.isArray(tool.tool_categories)
+              ? tool.tool_categories
+              : tool.tool_categories
+                ? [tool.tool_categories]
+                : []
+
+            for (const category of categories) {
+              const categoryName = category.name
+              if (categoryName) {
+                if (!acc[categoryName]) acc[categoryName] = []
+                acc[categoryName].push({ name: tool.name, logo_url: tool.logo_url ?? undefined })
               }
             }
             return acc
