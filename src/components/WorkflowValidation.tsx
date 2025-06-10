@@ -35,22 +35,19 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
 interface WorkflowValidationProps {
-  validation: WorkflowValidationResult
+  validation: WorkflowValidationResult & { user_input: string }
   isRevalidating: boolean
   onRevalidate: () => void
-  onCreateAutomation: (selectedTools: Record<number, string>) => void
 }
 
 export function WorkflowValidation({
   validation,
   isRevalidating,
   onRevalidate,
-  onCreateAutomation,
 }: WorkflowValidationProps) {
   const [steps, setSteps] = useState<WorkflowStep[]>(validation.steps)
   const [selectedTools, setSelectedTools] = useState<Record<number, string>>({})
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [activeCategory] = useState<{ id: string; name: string } | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -66,12 +63,14 @@ export function WorkflowValidation({
 
   const handleToolSelect = (stepNumber: number, tool: string) => {
     if (tool === 'add_new_tool') {
-      // const step = steps.find(s => s.step_number === stepNumber)
-      // This is a placeholder for getting category ID. You'll need to fetch it.
-      // For now, I'll assume we can get it from the step, which we can't.
       // This part of the logic will need to be improved.
       // Let's open the modal for now.
       setIsModalOpen(true)
+    } else if (tool === 'none') {
+      // If user selects "No tool", remove it from the state
+      const newSelectedTools = { ...selectedTools }
+      delete newSelectedTools[stepNumber]
+      setSelectedTools(newSelectedTools)
     } else {
       setSelectedTools(prev => ({ ...prev, [stepNumber]: tool }))
     }
@@ -119,7 +118,6 @@ export function WorkflowValidation({
 
   const handleCreateAutomation = async () => {
     try {
-      // Check authentication
       const supabase = createClient()
       const {
         data: { user },
@@ -133,11 +131,29 @@ export function WorkflowValidation({
         return
       }
 
-      // Call the parent callback with selected tools
-      onCreateAutomation(selectedTools)
-    } catch (error) {
-      console.error('Error checking authentication:', error)
-      toast.error('Authentication check failed. Please try again.')
+      const response = await fetch('/api/automations/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userInput: validation.user_input,
+          selectedTools,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData: { error?: string } = await response.json()
+        throw new Error(errorData?.error || 'Failed to start automation creation.')
+      }
+
+      const data: { automationId: string } = await response.json()
+      toast.success('Automation is generating! Redirecting...')
+      router.push(`/automations/${data.automationId}`)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.'
+      console.error('Error creating automation:', error)
+      toast.error(errorMessage)
     }
   }
 
@@ -147,7 +163,7 @@ export function WorkflowValidation({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onToolAdded={handleToolAdded}
-        categoryId={activeCategory?.id || ''} // This needs real data
+        categoryId={''} // This needs real data
       />
       <Card className="mt-6 border border-[#e5e7eb] shadow-lg">
         <CardHeader className="pb-4">
@@ -229,6 +245,7 @@ export function WorkflowValidation({
                               <SelectValue placeholder="Select a tool..." />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="none">No tool required</SelectItem>
                               {step.available_tools.map(tool => (
                                 <SelectItem key={tool.name} value={tool.name}>
                                   {tool.name}

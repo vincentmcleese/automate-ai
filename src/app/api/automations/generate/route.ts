@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { openRouterClient } from '@/lib/openrouter/client'
+import { getOpenRouterClient } from '@/lib/openrouter/client'
 import { GenerateAutomationRequest } from '@/types/admin'
 
 // POST /api/automations/generate - Generate automation JSON
@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
     processAutomationInBackground(
       automation.id,
       workflow_description,
-      prompt.model_id || 'openai/gpt-4o-mini',
       process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
     ).catch(async (error: unknown) => {
       console.error('Background processing error:', error)
@@ -117,7 +116,6 @@ export async function POST(request: NextRequest) {
 async function processAutomationInBackground(
   automationId: string,
   workflowDescription: string,
-  modelId: string,
   baseUrl: string
 ) {
   let supabase
@@ -145,26 +143,16 @@ async function processAutomationInBackground(
       throw new Error(`Failed to retrieve JSON generation prompt: ${promptError?.message}`)
     }
 
-    const processedPrompt = promptData.prompt_content.replace(
-      '{{workflow_description}}',
-      workflowDescription
-    )
-
     // Race the generation against a timeout
     const generatedContent = await Promise.race([
-      openRouterClient.generateWorkflowJSON(
-        workflowDescription,
-        {
-          is_valid: true,
-          confidence: 1,
-          estimated_time_hours: 0,
-          complexity: 'simple',
-          steps: [],
-          suggestions: [],
-        },
-        processedPrompt,
-        modelId
-      ),
+      getOpenRouterClient().generateWorkflowJSON(workflowDescription, {
+        is_valid: true,
+        confidence: 1,
+        estimated_time_hours: 0,
+        complexity: 'simple',
+        steps: [],
+        suggestions: [],
+      }),
       timeoutPromise,
     ])
 

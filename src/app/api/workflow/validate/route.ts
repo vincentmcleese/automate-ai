@@ -1,462 +1,118 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { openRouterClient } from '@/lib/openrouter/client'
-import { WorkflowValidationResult } from '@/types/admin'
+import { getOpenRouterClient } from '@/lib/openrouter/client'
+import { z } from 'zod'
+import { WorkflowStep } from '@/types/admin'
 
-// Define the categories that are considered 'selectable' by the user
-const SELECTABLE_TOOL_CATEGORIES = [
-  'Communication',
-  'CRM',
-  'Email',
-  'File Storage',
-  'Project Management',
-]
+const requestBodySchema = z.object({
+  workflow_description: z.string().min(1, 'Workflow description is required'),
+})
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse request body
-    let requestBody
-    try {
-      requestBody = await request.json()
-    } catch (error) {
-      console.error('Failed to parse request body:', error)
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-    }
+    const supabase = await createClient()
+    const openRouterClient = getOpenRouterClient()
 
-    const { workflow_description, debug_mode } = requestBody
+    const body = await request.json()
+    const validation = requestBodySchema.safeParse(body)
 
-    // Debug mode for testing system components
-    if (debug_mode) {
-      console.log('Debug mode enabled - testing system components')
-
-      // Test Supabase connection
-      let supabase
-      try {
-        supabase = await createClient()
-        console.log('✓ Supabase client created successfully')
-      } catch (error) {
-        console.error('✗ Supabase client creation failed:', error)
-        return NextResponse.json(
-          {
-            debug: {
-              supabase: false,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-          },
-          { status: 500 }
-        )
-      }
-
-      // Test system prompt retrieval with better authentication handling
-      let validationPrompt
-      try {
-        // First, let's get the current user to ensure we have authentication context
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser()
-        console.log('Authentication check:', {
-          hasUser: !!user,
-          userError: userError?.message,
-          userId: user?.id,
-        })
-
-        // Try to get the system prompt with detailed error logging
-        const { data, error: promptError } = await supabase
-          .from('system_prompts')
-          .select('prompt_content, name, is_active, created_at')
-          .eq('name', 'workflow_validation')
-          .eq('is_active', true)
-          .single()
-
-        console.log('System prompt query result:', {
-          hasData: !!data,
-          promptError: promptError
-            ? {
-                message: promptError.message,
-                code: promptError.code,
-                details: promptError.details,
-                hint: promptError.hint,
-              }
-            : null,
-        })
-
-        if (promptError) {
-          // If the RLS policy is blocking access, try a different approach
-          if (promptError.code === 'PGRST116' || promptError.message?.includes('No rows found')) {
-            console.log('No rows found - checking if prompt exists at all...')
-
-            // Check if the prompt exists but is blocked by RLS by temporarily bypassing authentication check
-            const { data: allPrompts, error: allPromptsError } = await supabase
-              .from('system_prompts')
-              .select('name, is_active')
-              .eq('name', 'workflow_validation')
-
-            console.log('All prompts check:', {
-              allPrompts,
-              allPromptsError: allPromptsError?.message,
-            })
-
-            throw new Error(
-              `System prompt not found or access denied. User authenticated: ${!!user}. Prompt exists: ${(allPrompts?.length || 0) > 0}`
-            )
-          }
-          throw promptError
-        }
-
-        validationPrompt = data
-        console.log('✓ System prompt retrieved successfully')
-      } catch (error) {
-        console.error('✗ System prompt retrieval failed:', error)
-        return NextResponse.json(
-          {
-            debug: {
-              supabase: true,
-              systemPrompt: false,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-          },
-          { status: 500 }
-        )
-      }
-
-      // Test OpenRouter API key
-      if (!process.env.NEXT_OPENROUTER_API_KEY) {
-        console.error('✗ OpenRouter API key not configured')
-        return NextResponse.json(
-          {
-            debug: {
-              supabase: true,
-              systemPrompt: true,
-              openRouterKey: false,
-              error: 'API key not configured',
-            },
-          },
-          { status: 500 }
-        )
-      }
-      console.log('✓ OpenRouter API key is configured')
-
-      // Test basic OpenRouter connectivity
-      try {
-        const testResult = await openRouterClient.validateWorkflow(
-          'Test workflow: Send an email when a form is submitted',
-          validationPrompt.prompt_content.replace(
-            '{{workflow_description}}',
-            'Test workflow: Send an email when a form is submitted'
-          ),
-          'openai/gpt-4o-mini'
-        )
-        console.log('✓ OpenRouter test validation successful')
-
-        return NextResponse.json({
-          debug: {
-            supabase: true,
-            systemPrompt: true,
-            openRouterKey: true,
-            openRouterTest: true,
-            testResult: testResult,
-          },
-        })
-      } catch (error) {
-        console.error('✗ OpenRouter test validation failed:', error)
-        return NextResponse.json(
-          {
-            debug: {
-              supabase: true,
-              systemPrompt: true,
-              openRouterKey: true,
-              openRouterTest: false,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-          },
-          { status: 500 }
-        )
-      }
-    }
-
-    if (!workflow_description || workflow_description.trim().length === 0) {
-      return NextResponse.json({ error: 'Workflow description is required' }, { status: 400 })
-    }
-
-    if (workflow_description.length > 10000) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Workflow description is too long (max 10,000 characters)' },
+        { error: 'Invalid request body', details: validation.error.flatten() },
         { status: 400 }
       )
     }
 
-    // Initialize Supabase client
-    let supabase
-    try {
-      supabase = await createClient()
-    } catch (error) {
-      console.error('Failed to create Supabase client:', error)
-      return NextResponse.json({ error: 'Database connection failed' }, { status: 503 })
-    }
+    const { workflow_description } = validation.data
 
-    // Get the workflow validation system prompt with authentication handling
-    console.log('Fetching workflow validation system prompt...')
-
-    // Get current user for authentication context (but don't require it)
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-    if (userError) {
-      console.log('No authenticated user (this is okay for public validation):', userError.message)
-    }
-    console.log('Current user context:', { hasUser: !!user, userId: user?.id })
-
-    const { data: validationPrompt, error: promptError } = await supabase
+    // 1. Get the validation system prompt from the database
+    const { data: promptData, error: promptError } = await supabase
       .from('system_prompts')
       .select('prompt_content')
       .eq('name', 'workflow_validation')
       .eq('is_active', true)
       .single()
 
-    if (promptError) {
+    if (promptError || !promptData) {
       console.error('Error fetching validation prompt:', promptError)
+      return NextResponse.json(
+        { error: 'Validation system prompt not found or is inactive.' },
+        { status: 503 }
+      )
+    }
 
-      // Provide more helpful error messages based on the error type
-      if (promptError.code === 'PGRST116' || promptError.message?.includes('No rows found')) {
-        return NextResponse.json(
-          {
-            error: `Validation system prompt not found. Please ensure the 'workflow_validation' prompt exists and is active.`,
-            details: {
-              authenticated: !!user,
-              errorCode: promptError.code,
-              errorMessage: promptError.message,
-            },
-          },
-          { status: 503 }
+    // 2. Call the OpenRouter client to validate the workflow
+    const validationResult = await openRouterClient.validateWorkflow(
+      workflow_description,
+      promptData.prompt_content
+    )
+
+    // 3. Augment the result with available tools for each step that needs them
+    const SELECTABLE_TOOL_CATEGORIES = [
+      'Communication',
+      'CRM',
+      'Email',
+      'File Storage',
+      'Project Management',
+    ]
+
+    const stepsRequiringTools = (validationResult.steps as WorkflowStep[])?.filter(
+      step => step.tool_category && SELECTABLE_TOOL_CATEGORIES.includes(step.tool_category)
+    )
+
+    if (stepsRequiringTools && stepsRequiringTools.length > 0) {
+      const { data: allTools } = await supabase
+        .from('tools')
+        .select('name, logo_url, tool_categories(name)')
+        .in(
+          'category_id',
+          (
+            await supabase
+              .from('tool_categories')
+              .select('id')
+              .in('name', SELECTABLE_TOOL_CATEGORIES)
+          ).data?.map((c: { id: string }) => c.id) || []
         )
-      }
+        .eq('is_active', true)
 
-      return NextResponse.json(
-        { error: 'Validation system prompt not found. Please contact an administrator.' },
-        { status: 503 }
-      )
-    }
+      if (allTools) {
+        type Tool = {
+          name: string
+          logo_url: string | null
+          tool_categories: { name: string }[] | null
+        }
 
-    if (!validationPrompt) {
-      console.error('No active validation prompt found')
-      return NextResponse.json(
-        { error: 'Validation system is currently unavailable' },
-        { status: 503 }
-      )
-    }
-
-    console.log('Found validation prompt, preparing system prompt...')
-
-    // Replace the template variable in the prompt
-    const systemPrompt = validationPrompt.prompt_content.replace(
-      /\{\{workflow_description\}\}/g,
-      workflow_description
-    )
-
-    // Get the default model for processing
-    const { data: defaultModelSetting } = await supabase
-      .from('admin_settings')
-      .select('value')
-      .eq('key', 'default_model')
-      .single()
-
-    let defaultModel = 'openai/gpt-4o-mini' // fallback default
-
-    if (defaultModelSetting?.value) {
-      try {
-        // Try to parse as JSON first (in case it's stored as JSON string)
-        defaultModel = JSON.parse(defaultModelSetting.value)
-      } catch {
-        // If parsing fails, assume it's already a plain string
-        defaultModel = defaultModelSetting.value
-      }
-    }
-
-    console.log('Using model:', defaultModel)
-
-    // Check if OpenRouter client is available
-    if (!process.env.NEXT_OPENROUTER_API_KEY) {
-      console.error('OpenRouter API key not configured')
-      return NextResponse.json(
-        { error: 'AI validation service is not configured. Please contact an administrator.' },
-        { status: 503 }
-      )
-    }
-
-    console.log('OpenRouter API key is configured, calling validation...')
-
-    // Call OpenRouter to validate the workflow
-    let validationResult: WorkflowValidationResult
-
-    try {
-      console.log('Calling OpenRouter validateWorkflow with:', {
-        workflowLength: workflow_description.length,
-        systemPromptLength: systemPrompt.length,
-        model: defaultModel,
-      })
-
-      validationResult = await openRouterClient.validateWorkflow(
-        workflow_description,
-        systemPrompt,
-        defaultModel
-      )
-
-      console.log(
-        'DEBUG: Raw validation result from AI:',
-        JSON.stringify(validationResult, null, 2)
-      )
-
-      // Augment the result with available tools for each step
-      if (validationResult && validationResult.steps) {
-        // Fetch all selectable tools at once to avoid multiple queries
-        const { data: allTools, error: toolsError } = await supabase
-          .from('tools')
-          .select('name, logo_url, tool_categories(name)')
-          .in(
-            'category_id',
-            (
-              await supabase
-                .from('tool_categories')
-                .select('id')
-                .in('name', SELECTABLE_TOOL_CATEGORIES)
-            ).data?.map(c => c.id) || []
-          )
-          .eq('is_active', true)
-
-        if (toolsError) {
-          console.error('DEBUG: Error fetching tools from Supabase:', toolsError)
-          // Proceed without tool suggestions if this fails
-        } else {
-          console.log('DEBUG: Fetched tools from Supabase:', allTools)
-
-          // Debug: Check the structure of the first tool to understand the data format
-          if (allTools && allTools.length > 0) {
-            console.log('DEBUG: First tool structure:', JSON.stringify(allTools[0], null, 2))
-            console.log('DEBUG: tool_categories type:', typeof allTools[0].tool_categories)
-            console.log(
-              'DEBUG: tool_categories isArray:',
-              Array.isArray(allTools[0].tool_categories)
-            )
-          }
-
-          // Group tools by category for easy lookup
-          const toolsByCategory = (allTools as any[]).reduce(
-            (acc, tool) => {
-              // Handle both array and object formats from Supabase
-              let categoryName: string | undefined
-              if (Array.isArray(tool.tool_categories) && tool.tool_categories.length > 0) {
-                categoryName = tool.tool_categories[0]?.name
-              } else if (tool.tool_categories && typeof tool.tool_categories === 'object') {
-                categoryName = tool.tool_categories.name
-              }
-
-              console.log(
-                `DEBUG: Processing tool "${tool.name}": categoryName="${categoryName}", tool_categories=`,
-                tool.tool_categories
-              )
-
-              if (categoryName) {
-                if (!acc[categoryName]) {
-                  acc[categoryName] = []
+        const toolsByCategory = (allTools as Tool[]).reduce(
+          (acc, tool) => {
+            if (tool.tool_categories) {
+              for (const category of tool.tool_categories) {
+                const categoryName = category.name
+                if (categoryName) {
+                  if (!acc[categoryName]) acc[categoryName] = []
+                  acc[categoryName].push({ name: tool.name, logo_url: tool.logo_url ?? undefined })
                 }
-                acc[categoryName].push({
-                  name: tool.name,
-                  logo_url: tool.logo_url || undefined,
-                })
-                console.log(`DEBUG: Added tool "${tool.name}" to category "${categoryName}"`)
-              } else {
-                console.log(`DEBUG: Skipped tool "${tool.name}" - no valid category found`)
               }
-              return acc
-            },
-            {} as Record<string, { name: string; logo_url?: string }[]>
-          )
-
-          console.log('DEBUG: Tools grouped by category:', toolsByCategory)
-
-          // Add available_tools to each step
-          for (const step of validationResult.steps) {
-            if (step.tool_category && SELECTABLE_TOOL_CATEGORIES.includes(step.tool_category)) {
-              step.available_tools = toolsByCategory[step.tool_category] || []
             }
+            return acc
+          },
+          {} as Record<string, { name: string; logo_url?: string }[]>
+        )
+
+        for (const step of validationResult.steps as WorkflowStep[]) {
+          if (step.tool_category && toolsByCategory[step.tool_category]) {
+            step.available_tools = toolsByCategory[step.tool_category]
           }
         }
       }
-
-      console.log(
-        'DEBUG: Final validation result sent to frontend:',
-        JSON.stringify(validationResult, null, 2)
-      )
-
-      console.log('OpenRouter validation successful:', {
-        isValid: validationResult.is_valid,
-        confidence: validationResult.confidence,
-        stepsCount: validationResult.steps?.length,
-      })
-    } catch (error) {
-      console.error('OpenRouter validation failed with error:', error)
-      console.error('Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace',
-      })
-
-      if (error instanceof Error) {
-        if (error.message.includes('API key')) {
-          console.error('API key authentication issue detected')
-          return NextResponse.json(
-            { error: 'AI validation service authentication failed' },
-            { status: 503 }
-          )
-        }
-        if (error.message.includes('Failed to validate workflow')) {
-          console.error('Workflow validation failed - likely JSON parsing or model response issue')
-          return NextResponse.json(
-            {
-              error:
-                'AI validation failed. Please try again or simplify your workflow description.',
-            },
-            { status: 500 }
-          )
-        }
-        if (error.message.includes('fetch')) {
-          console.error('Network/fetch error detected')
-          return NextResponse.json(
-            { error: 'Network error communicating with AI service' },
-            { status: 503 }
-          )
-        }
-      }
-
-      return NextResponse.json(
-        { error: 'AI validation service is temporarily unavailable' },
-        { status: 503 }
-      )
     }
 
-    console.log('Validation complete, returning result')
-    return NextResponse.json({
-      validation: validationResult,
-      model_used: defaultModel,
-      timestamp: new Date().toISOString(),
-    })
+    // 4. Return the final validation result
+    return NextResponse.json({ validation: validationResult })
   } catch (error) {
-    console.error('Unexpected error in workflow validation:', error)
-    console.error('Error details:', {
-      name: error instanceof Error ? error.name : 'Unknown',
+    console.error('Unexpected error in workflow validation:', {
       message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace',
+      stack: error instanceof Error ? error.stack : 'No stack trace available',
     })
-
-    // Ensure we always return a JSON response
-    return NextResponse.json(
-      {
-        error: 'An unexpected error occurred during validation',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'An unexpected error occurred.' }, { status: 500 })
   }
 }

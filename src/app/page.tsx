@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { WorkflowValidation } from '@/components/WorkflowValidation'
-import { WorkflowValidationResult, WorkflowStep } from '@/types/admin'
+import { WorkflowValidationResult } from '@/types/admin'
 import {
   Sparkles,
   Zap,
@@ -20,14 +19,14 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 
 export default function Home() {
-  const router = useRouter()
   const [workflow, setWorkflow] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isRevalidating, setIsRevalidating] = useState(false)
-  const [validationResult, setValidationResult] = useState<WorkflowValidationResult | null>(null)
+  const [validationResult, setValidationResult] = useState<
+    (WorkflowValidationResult & { user_input: string }) | null
+  >(null)
   const [hasValidated, setHasValidated] = useState(false)
 
   const validateWorkflow = async (description: string) => {
@@ -62,7 +61,7 @@ export default function Home() {
     setIsLoading(true)
     try {
       const validation = await validateWorkflow(workflow)
-      setValidationResult(validation)
+      setValidationResult({ ...validation, user_input: workflow })
       setHasValidated(true)
 
       if (validation.is_valid) {
@@ -83,7 +82,7 @@ export default function Home() {
     setIsRevalidating(true)
     try {
       const validation = await validateWorkflow(workflow)
-      setValidationResult(validation)
+      setValidationResult({ ...validation, user_input: workflow })
 
       if (validation.is_valid) {
         toast.success('Revalidation complete! Workflow is ready for automation.')
@@ -95,92 +94,6 @@ export default function Home() {
     } finally {
       setIsRevalidating(false)
     }
-  }
-
-  const handleCreateAutomation = async (selectedTools?: Record<number, string>) => {
-    try {
-      // Check authentication
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        toast.error('Please sign in to create automations')
-        router.push(
-          '/login?redirect=/generate-automation&message=Please+sign+in+to+create+automations'
-        )
-        return
-      }
-
-      // Create enhanced workflow description if tools were selected
-      let description = workflow.trim()
-      if (selectedTools && validationResult) {
-        description = createEnhancedWorkflowDescription(
-          workflow.trim(),
-          validationResult.steps,
-          selectedTools
-        )
-      }
-
-      // Navigate to generation page with enhanced workflow description
-      const params = new URLSearchParams({
-        description: description,
-      })
-      router.push(`/generate-automation?${params.toString()}`)
-    } catch (error) {
-      console.error('Error checking authentication:', error)
-      toast.error('Authentication check failed. Please try again.')
-    }
-  }
-
-  // Helper function to create enhanced workflow description
-  const createEnhancedWorkflowDescription = (
-    originalDescription: string,
-    workflowSteps: WorkflowStep[],
-    toolSelections: Record<number, string>
-  ): string => {
-    let enhanced = originalDescription
-
-    // Add tool specifications for each step that has a selected tool
-    const toolSpecifications: string[] = []
-
-    workflowSteps.forEach(step => {
-      const selectedTool = toolSelections[step.step_number]
-      if (
-        selectedTool &&
-        step.tool_category &&
-        step.tool_category !== 'Code' &&
-        step.tool_category !== 'HTTPRequest'
-      ) {
-        // Create a natural language specification for the tool choice
-        const specification = createToolSpecification(step, selectedTool)
-        if (specification) {
-          toolSpecifications.push(specification)
-        }
-      }
-    })
-
-    // Append tool specifications to the original description
-    if (toolSpecifications.length > 0) {
-      enhanced += '\n\nSpecific tool requirements:\n' + toolSpecifications.join('\n')
-    }
-
-    return enhanced
-  }
-
-  // Helper function to create natural language tool specifications
-  const createToolSpecification = (step: WorkflowStep, selectedTool: string): string => {
-    const categoryToAction: Record<string, string> = {
-      Communication: 'send notifications or messages',
-      Email: 'send emails',
-      CRM: 'manage customer data',
-      'File Storage': 'store or retrieve files',
-      'Project Management': 'manage tasks or projects',
-    }
-
-    const action = categoryToAction[step.tool_category!] || 'perform actions'
-    return `- Use ${selectedTool} to ${action} for the step: "${step.description}"`
   }
 
   const handleClear = () => {
@@ -290,7 +203,6 @@ export default function Home() {
             validation={validationResult}
             isRevalidating={isRevalidating}
             onRevalidate={handleRevalidate}
-            onCreateAutomation={handleCreateAutomation}
           />
         )}
 

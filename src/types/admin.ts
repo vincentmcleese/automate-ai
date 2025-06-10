@@ -214,16 +214,16 @@ export interface SystemPromptWithTrainingData extends SystemPrompt {
 export interface Automation {
   id: string
   user_id: string
-  prompt_id?: string
-  prompt_version?: number
+  prompt_id?: string | null
+  prompt_version?: number | null
   user_input: string
   generated_json: Record<string, unknown>
-  title?: string
-  description?: string
-  status: 'generating' | 'completed' | 'failed'
-  image_url?: string
+  title?: string | null
+  description?: string | null
+  status: 'pending' | 'generating' | 'completed' | 'failed'
   created_at: string
   updated_at: string
+  error_message?: string | null
 }
 
 export interface CreateAutomationData {

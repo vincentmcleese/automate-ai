@@ -2,7 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin, isValidModelId } from '@/lib/admin/utils'
 import { CreateOpenRouterModelData } from '@/types/admin'
-import { openRouterClient } from '@/lib/openrouter/client'
+import { getOpenRouterClient } from '@/lib/openrouter/client'
+
+// Define a more specific type for the OpenRouter model payload
+type OpenRouterModelPayload = {
+  id: string
+  name: string
+  description: string
+  context_length: number
+  pricing?: {
+    prompt?: string
+    completion?: string
+  }
+  top_provider?: {
+    supports_function_calling?: boolean
+    supports_streaming?: boolean
+  }
+}
 
 // GET /api/admin/models - List all models
 export async function GET(request: NextRequest) {
@@ -28,12 +44,13 @@ export async function GET(request: NextRequest) {
     // If sync is requested, fetch latest models from OpenRouter
     if (sync) {
       try {
+        const openRouterClient = getOpenRouterClient()
         const latestModels = await openRouterClient.getAvailableModels()
 
         // Update our database with latest model information
         for (const model of latestModels) {
           if (isValidModelId(model.id)) {
-            const modelWithPricing = model as any // OpenRouter API may have additional properties
+            const modelWithPricing = model as OpenRouterModelPayload
             await supabase.from('openrouter_models').upsert(
               {
                 id: model.id,
@@ -141,7 +158,7 @@ export async function POST(request: NextRequest) {
     // Test the model if OpenRouter API key is available
     let isWorking = false
     try {
-      isWorking = await openRouterClient.testModel(modelData.id)
+      isWorking = await getOpenRouterClient().testModel(modelData.id)
     } catch (error) {
       console.warn(`Could not test model ${modelData.id}:`, error)
     }

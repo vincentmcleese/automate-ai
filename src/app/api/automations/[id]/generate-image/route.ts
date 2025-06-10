@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { openRouterClient } from '@/lib/openrouter/client'
+import { getOpenRouterClient } from '@/lib/openrouter/client'
 
 // POST /api/automations/[id]/generate-image - Generate image for automation
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -9,6 +9,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const supabase = await createClient()
+    const openRouterClient = getOpenRouterClient()
     const { id } = await params
 
     console.log('📝 Fetching automation:', id)
@@ -73,19 +74,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     console.log('🤖 Generating image prompt with OpenRouter...')
 
-    // Add timeout for the OpenRouter call
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('OpenRouter request timeout')), 30000)
-    )
+    // Call OpenRouter to generate the image prompt
+    const imagePromptText = await openRouterClient.complete(processedPrompt, 'openai/gpt-4o-mini', {
+      temperature: 0.8,
+      max_tokens: 300,
+    })
 
-    // Generate image prompt using OpenRouter with timeout
-    const imagePromptText = (await Promise.race([
-      openRouterClient.generateContent(
-        processedPrompt,
-        imagePrompt.model_id || 'openai/gpt-4o-mini'
-      ),
-      timeoutPromise,
-    ])) as string
+    if (!imagePromptText) {
+      console.error('❌ Failed to generate image prompt')
+      return NextResponse.json({ error: 'Failed to generate image' }, { status: 500 })
+    }
 
     console.log('✅ Image prompt generated:', imagePromptText.substring(0, 100) + '...')
 
