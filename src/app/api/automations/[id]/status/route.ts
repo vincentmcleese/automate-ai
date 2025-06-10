@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 // GET /api/automations/[id]/status - Get automation status
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
-    const { id } = params
+    const { id } = await params // Await the promise to get the id
 
     const { data: automation, error } = await supabase
       .from('automations')
