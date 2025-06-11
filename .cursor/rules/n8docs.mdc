@@ -1,0 +1,635 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Built-in integrations#
+This section contains the node library: reference documentation for every built-in node in n8n, and their credentials.
+Node operations: Triggers and Actions#
+When you add a node to a workflow, n8n displays a list of available operations. An operation is something a node does, such as getting or sending data.
+There are two types of operation:
+Triggers start a workflow in response to specific events or conditions in your services. When you select a Trigger, n8n adds a trigger node to your workflow, with the Trigger operation you chose pre-selected. When you search for a node in n8n, Trigger operations have a bolt icon .
+Actions are operations that represent specific tasks within a workflow, which you can use to manipulate data, perform operations on external systems, and trigger events in other systems as part of your workflows. When you select an Action, n8n adds a node to your workflow, with the Action operation you chose pre-selected.
+Core nodes#
+Core nodes can be actions or triggers. Whereas most nodes connect to a specific external service, core nodes provide functionality such as logic, scheduling, or generic API calls.
+Cluster nodes#
+Cluster nodes are node groups that work together to provide functionality in an n8n workflow. Instead of using a single node, you use a root node and one or more sub-nodes that extend the functionality of the node.
+Credentials#
+External services need a way to identify and authenticate users. This data can range from an API key over an email/password combination to a long multi-line private key. You can save these in n8n as credentials.
+Nodes in n8n can then request that credential information. As another layer of security, only node types with specific access rights can access the credentials.
+To make sure that the data is secure, it gets saved to the database encrypted. n8n uses a random personal encryption key, which it automatically generates on the first run of n8n and then saved under ~/.n8n/config.
+To learn more about creating, managing, and sharing credentials, refer to Manage credentials.
+Community nodes#
+n8n supports custom nodes built by the community. Refer to Community nodes for guidance on installing and using these nodes.
+For help building your own custom nodes, and publish them to npm, refer to Creating nodes for more information.
+
+Core Nodes
+Core nodes, Activation Trigger, Aggregate, AI Transform, Code, Compare Datasets, Compression, Chat Trigger, Convert to File, Crypto, Date & Time, Debug Helper, Edit Fields (Set), Edit Image, Email Trigger (IMAP), Error Trigger, Execute Command, Execute Sub-workflow, Execute Sub-workflow Trigger, Execution Data, Extract From File, Filter, FTP, Git, GraphQL, HTML, HTTP Request, If, JWT, LDAP, Limit, Local File Trigger, Loop Over Items (Split in Batches), Manual Trigger, Markdown, MCP Server Trigger, Merge, n8n, n8n Form, n8n Form Trigger, n8n Trigger, No Operation, do nothing, Read/Write Files from Disk, Remove Duplicates, Rename Keys, Respond to Webhook, RSS Read, RSS Feed Trigger, Schedule Trigger, Send Email, Sort, Split Out, SSE Trigger, SSH, Stop And Error, Summarize, Switch, TOTP, Wait, Webhook, Workflow Trigger, XML
+
+
+
+Actions Nodes
+Action Network, ActiveCampaign, Adalo, Affinity, Agile CRM, Airtable, Airtop, AMQP Sender, APITemplate.io, Asana, Automizy, Autopilot, AWS Certificate Manager, AWS Comprehend, AWS DynamoDB, AWS Elastic Load Balancing, AWS Lambda, AWS Rekognition, AWS S3, AWS SES, AWS SNS, AWS SQS, AWS Textract, AWS Transcribe, Azure Cosmos DB, Azure Storage, BambooHR, Bannerbear, Baserow, Beeminder, Bitly, Bitwarden, Box, Brandfetch, Brevo, Bubble, Chargebee, CircleCI, Webex by Cisco, Clearbit, ClickUp, Clockify, Cloudflare, Cockpit, Coda, CoinGecko, Contentful, ConvertKit, Copper, Cortex, CrateDB, crowd.dev, Customer.io, DeepL, Demio, DHL, Discord, Discourse, Disqus, Drift, Dropbox, Dropcontact, E-goi, Elasticsearch, Elastic Security, Emelia, ERPNext, Facebook Graph API, FileMaker, Flow, Freshdesk, Freshservice, Freshworks CRM, GetResponse, Ghost, GitHub, GitLab, Gmail, Gong, Google Ads, Google Analytics, Google BigQuery, Google Books, Google Business Profile, Google Calendar, Google Chat, Google Cloud Firestore, Google Cloud Natural Language, Google Cloud Realtime Database, Google Cloud Storage, Google Contacts, Google Docs, Google Drive, Google Perspective, Google Sheets, Google Slides, Google Tasks, Google Translate, Google Workspace Admin, Gotify, GoToWebinar, Grafana, Grist, Hacker News, HaloPSA, Harvest, Help Scout, HighLevel, Home Assistant, HubSpot, Humantic AI, Hunter, Intercom, Invoice Ninja, Iterable, Jenkins, Jina AI, Jira Software, Kafka, Keap, Kitemaker, KoboToolbox, Lemlist, Line, Linear, LingvaNex, LinkedIn, LoneScale, Magento 2, Mailcheck, Mailchimp, MailerLite, Mailgun, Mailjet, Mandrill, marketstack, Matrix, Mattermost, Mautic, Medium, MessageBird, Metabase, Microsoft Dynamics CRM, Microsoft Entra ID, Microsoft Excel 365, Microsoft Graph Security, Microsoft OneDrive, Microsoft Outlook, Microsoft SharePoint, Microsoft SQL, Microsoft Teams, Microsoft To Do, Mindee, MISP, Mocean, monday.com, MongoDB, Monica CRM, MQTT, MSG91, MySQL, Customer Datastore (n8n Training), Customer Messenger (n8n Training), NASA, Netlify, Netscaler ADC, Nextcloud, NocoDB, Notion, npm, Odoo, Okta, One Simple API, Onfleet, OpenAI, OpenThesaurus, OpenWeatherMap, Oura, Paddle, PagerDuty, PayPal, Peekalink, PhantomBuster, Philips Hue, Pipedrive, Plivo, PostBin, Postgres, PostHog, ProfitWell, Pushbullet, Pushcut, Pushover, QuestDB, Quick Base, QuickBooks Online, QuickChart, RabbitMQ, Raindrop, Reddit, Redis, Rocket.Chat, Rundeck, S3, Salesforce, Salesmate, SeaTable, SecurityScorecard, Segment, SendGrid, Sendy, Sentry.io, ServiceNow, seven, Shopify, SIGNL4, Slack, Snowflake, Splunk, Spontit, Spotify, Stackby, Storyblok, Strapi, Strava, Stripe, Supabase, SyncroMSP, Taiga, Tapfiliate, Telegram, TheHive, TheHive 5, TimescaleDB, Todoist, Travis CI, Trello, Twake, Twilio, Twist, Unleashed Software, UpLead, uProc, UptimeRobot, urlscan.io, Venafi TLS Protect Cloud, Venafi TLS Protect Datacenter, Vero, Vonage, Webflow, Wekan, WhatsApp Business Cloud, Wise, WooCommerce, WordPress, X (Formerly Twitter), Xero, Yourls, YouTube, Zammad, Zendesk, Zoho CRM, Zoom, Zulip, Triggers, Cluster nodes, Credentials, Custom API actions for existing nodes, Handle rate limits
+
+
+
+Airtable node#
+Use the Airtable node to automate work in Airtable, and integrate Airtable with other applications. n8n has built-in support for a wide range of Airtable features, including creating, reading, listing, updating and deleting tables.
+On this page, you'll find a list of operations the Airtable node supports and links to more resources.
+Credentials
+Refer to Airtable credentials for guidance on setting up authentication.
+Operations#
+Append the data to a table
+Delete data from a table
+List data from a table
+Read data from a table
+Update data in a table
+
+
+
+
+
+OpenAI node#
+Use the OpenAI node to automate work in OpenAI and integrate OpenAI with other applications. n8n has built-in support for a wide range of OpenAI features, including creating images and assistants, as well as chatting with models.
+On this page, you'll find a list of operations the OpenAI node supports and links to more resources.
+Operations#
+Assistant
+Create an Assistant
+Delete an Assistant
+List Assistants
+Message an Assistant
+Update an Assistant
+Text
+Message a Model
+Classify Text for Violations
+Image
+Analyze Image
+Generate an Image
+Audio
+Generate Audio
+Transcribe a Recording
+Translate a Recording
+File
+Delete a File
+List Files
+Upload a File
+
+
+
+Slack node#
+Use the Slack node to automate work in Slack, and integrate Slack with other applications. n8n has built-in support for a wide range of Slack features, including creating, archiving, and closing channels, getting users and files, as well as deleting messages.
+On this page, you'll find a list of operations the Slack node supports and links to more resources.
+Operations#
+Channel
+Archive a channel.
+Close a direct message or multi-person direct message.
+Create a public or private channel-based conversation.
+Get information about a channel.
+Get Many: Get a list of channels in Slack.
+History: Get a channel's history of messages and events.
+Invite a user to a channel.
+Join an existing channel.
+Kick: Remove a user from a channel.
+Leave a channel.
+Member: List the members of a channel.
+Open or resume a direct message or multi-person direct message.
+Rename a channel.
+Replies: Get a thread of messages posted to a channel.
+Sets purpose of a channel.
+Sets topic of a channel.
+Unarchive a channel.
+File
+Get a file.
+Get Many: Get and filter team files.
+Upload: Create or upload an existing file.
+Message
+Delete a message
+Get permalink: Get a message's permalink.
+Search for messages
+Send a message
+Send and Wait for Approval: Send a message and wait for approval from the recipient before continuing.
+Update a message
+Reaction
+Add a reaction to a message.
+Get a message's reactions.
+Remove a reaction from a message.
+Star
+Add a star to an item.
+Delete a star from an item.
+Get Many: Get a list of an authenticated user's stars.
+User
+Get information about a user.
+Get Many: Get a list of users.
+Get User's Profile.
+Get User's Status.
+Update User's Profile.
+User Group
+Create a user group.
+Disable a user group.
+Enable a user group.
+Get Many: Get a list of user groups.
+Update a user group.
+
+
+
+
+Aggregate#
+Use the Aggregate node to take separate items, or portions of them, and group them together into individual items.
+Node parameters#
+To begin using the node, select the Aggregate you'd like to use:
+Individual Fields: Aggregate individual fields separately.
+All Item Data: Aggregate all item data into a single list.
+Individual Fields#
+Input Field Name: Enter the name of the field in the input data to aggregate together.
+Rename Field: This toggle controls whether to give the field a different name in the aggregated output data. Turn this on to add a different field name. If you're aggregating multiple fields, you must provide new output field names. You can't leave multiple fields undefined.
+Output Field Name: This field is displayed when you turn on Rename Field. Enter the field name for the aggregated output data.
+Refer to Node options for more configuration options.
+All Item Data#
+Put Output in Field: Enter the name of the field to output the data in.
+Include: Select which fields to include in the output. Choose from:
+All fields: The output includes data from all fields with no further parameters.
+Specified Fields: If you select this option, enter a comma-separated list of fields the output should include data from in the Fields To Include parameter. The output will include only the fields in this list.
+All Fields Except: If you select this option, enter a comma-separated list of fields the output should exclude data from in the Fields To Exclude parameter. The output will include all fields not in this list.
+Refer to Node options for more configuration options.
+Node options#
+You can further configure this node using these Options:
+Disable Dot Notation: The node displays this toggle when you select the Individual Fields Aggregate. It controls whether to disallow referencing child fields using parent.child in the field name (turned on), or allow it (turned off, default).
+Merge Lists: The node displays this toggle when you select the Individual Fields Aggregate. Turn it on if the field to aggregate is a list and you want to output a single flat list rather than a list of lists.
+Include Binaries: The node displays this toggle for both Aggregate types. Turn it on if you want to include binary data from the input in the new output.
+Keep Missing And Null Values: The node displays this toggle when you select the Individual Fields Aggregate. Turn it on to add a null (empty) entry in the output list when there is a null or missing value in the input. If turned off, the output ignores null or empty values.
+
+
+
+
+
+Code node#
+Use the Code node to write custom JavaScript or Python and run it as a step in your workflow.
+
+
+
+
+
+Date & Time#
+The Date & Time node manipulates date and time data and convert it to different formats.
+Operations#
+Add to a Date: Add a specified amount of time to a date.
+Extract Part of a Date: Extract part of a date, such as the year, month, or day.
+Format a Date: Transform a date's format to a new format using preset options or a custom expression.
+Get Current Date: Get the current date and choose whether to include the current time or not. Useful for triggering other flows and conditional logic.
+Get Time Between Dates: Calculate the amount of time in specific units between two dates.
+Round a Date: Round a date up or down to the nearest unit of your choice, such as month, day, or hour.
+Subtract From a Date: Subtract a specified amount of time from a date.
+Refer to the sections below for parameters and options specific to each operation.
+Add to a Date#
+Configure the node for this operation using these parameters:
+Date to Add To: Enter the date you want to change.
+Time Unit to Add: Select the time unit for the Duration parameter.
+Duration: Enter the number of time units to add to the date.
+Output Field Name: Enter the name of the field to output the new date to.
+Add to a Date options#
+This operation has one option: Include Input Fields. If you'd like to include all of the input fields in the output, turn this option on. If turned off, only the Output Field Name and its contents are output.
+Extract Part of a Date#
+Configure the node for this operation using these parameters:
+Date: Enter the date you want to round or extract part of.
+Part: Select the part of the date you want to extract. Choose from:
+Year
+Month
+Week
+Day
+Hour
+Minute
+Second
+Output Field Name: Enter the name of the field to output the extracted date part to.
+Extract Part of a Date options#
+This operation has one option: Include Input Fields. If you'd like to include all of the input fields in the output, turn this option on. If turned off, only the Output Field Name and its contents are output.
+Format a Date#
+Configure the node for this operation using these parameters:
+Date: Enter the date you want to format.
+Format: Select the format you want to change the date to. Choose from:
+Custom Format: Enter your own custom format using Luxon's special tokens. Tokens are case-sensitive.
+MM/DD/YYYY: For 4 September 1986, this formats the date as 09/04/1986.
+YYYY/MM/DD: For 4 September 1986, this formats the date as 1986/09/04.
+MMMM DD YYYY: For 4 September 1986, this formats the date as September 04 1986.
+MM-DD-YYYY: For 4 September 1986, this formats the date as 09-04-1986.
+YYYY-MM-DD: For 4 September 1986, this formats the date as 1986-09-04.
+Output Field Name: Enter the name of the field to output the formatted date to.
+Format a Date options#
+This operation includes these options:
+Include Input Fields: If you'd like to include all of the input fields in the output, turn this option on. If turned off, only the Output Field Name and its contents are output.
+From Date Format: If the node isn't recognizing the Date format correctly, enter the format for that Date here so the node can process it properly. Use Luxon's special tokens to enter the format. Tokens are case-sensitive
+Use Workflow Timezone: Whether to use the input's time zone (turned off) or the workflow's timezone (turned on).
+Get Current Date#
+Configure the node for this operation using these parameters:
+Include Current Time: Choose whether to include the current time (turned on) or to set the time to midnight (turned off).
+Output Field Name: Enter the name of the field to output the current date to.
+Get Current Date options#
+This operation includes these options:
+Include Input Fields: If you'd like to include all of the input fields in the output, turn this option on. If turned off, only the Output Field Name and its contents are output.
+Timezone: Set the timezone to use. If left blank, the node uses the n8n instance's timezone.
++00:00 timezone
+Use GMT for +00:00 timezone.
+Get Time Between Dates#
+Configure the node for this operation using these parameters:
+Start Date: Enter the earlier date you want to compare.
+End Date: Enter the later date you want to compare.
+Units: Select the units you want to calculate the time between. You can include multiple units. Choose from:
+Year
+Month
+Week
+Day
+Hour
+Minute
+Second
+Millisecond
+Output Field Name: Enter the name of the field to output the calculated time between to.
+Get Time Between Dates options#
+The Get Time Between Dates operation includes the Include Input Fields option as well as an Output as ISO String option. If you leave this option off, each unit you selected will return its own time difference calculation, for example:
+timeDifference
+years : 1
+months : 3
+days : 13
+If you turn on the Output as ISO String option, the node formats the output as a single ISO duration string, for example: P1Y3M13D.
+ISO duration format displays a format as P<n>Y<n>M<n>DT<n>H<n>M<n>S. <n> is the number for the unit after it.
+P = period (duration). It begins all ISO duration strings.
+Y = years
+M = months
+W = weeks
+D = days
+T = delineator between dates and times, used to avoid confusion between months and minutes
+H = hours
+M = minutes
+S = seconds
+Milliseconds don't get their own unit, but instead are decimal seconds. For example, 2.1 milliseconds is 0.0021S.
+Round a Date#
+Configure the node for this operation using these parameters:
+Date: Enter the date you'd like to round.
+Mode: Choose whether to Round Down or Round Up.
+To Nearest: Select the unit you'd like to round to. Choose from:
+Year
+Month
+Week
+Day
+Hour
+Minute
+Second
+Output Field Name: Enter the name of the field to output the rounded date to.
+Round a Date options#
+This operation has one option: Include Input Fields. If you'd like to include all of the input fields in the output, turn this option on. If turned off, only the Output Field Name and its contents are output.
+Subtract From a Date#
+Configure the node for this operation using these parameters:
+Date to Subtract From: Enter the date you'd like to subtract from.
+Time Unit to Subtract: Select the unit for the Duration amount you want to subtract.
+Duration: Enter the amount of the time units you want to subtract from the Date to Subtract From.
+Output Field Name: Enter the name of the field to output the rounded date to.
+Subtract From a Date options#
+This operation has one option: Include Input Fields. If you'd like to include all of the input fields in the output, turn this option on. If turned off, only the Output Field Name and its contents are output.
+
+
+
+Edit Fields (Set)#
+Use the Edit Fields node to set workflow data. This node can set new data as well as overwrite data that already exists. This node is crucial in workflows which expect incoming data from previous nodes, such as when inserting values to Google Sheets or databases.
+Node parameters#
+These are the settings and options available in the Edit Fields node.
+Mode#
+You can either use Manual Mapping to edit fields using the GUI or JSON Output to write JSON that n8n adds to the input data.
+Fields to Set#
+If you select Mode > Manual Mapping, you can configure the fields by dragging and dropping values from INPUT.
+The default behavior when you drag a value is:
+n8n sets the value's name as the field name.
+The field value contains an expression which accesses the value.
+If you don't want to use expressions:
+Hover over a field. n8n displays the Fixed | Expressions toggle.
+Select Fixed.
+You can do this for both the name and value of the field.
+Keep Only Set Fields#
+Enable this to discard any input data that you don't use in Fields to Set.
+Include in Output#
+Choose which input data to include in the node's output data.
+Node options#
+Use these options to customize the behavior of the node.
+Include Binary Data#
+If the input data includes binary data, choose whether to include it in the Edit Fields node's output data.
+Ignore Type Conversion Errors#
+Manual Mapping only.
+Enabling this allows n8n to ignore some data type errors when mapping fields.
+Support Dot Notation#
+By default, n8n supports dot notation.
+For example, when using manual mapping, the node follows the dot notation for the Name field. That means if you set the name in the Name field as number.one and the value in the Value field as 20, the resulting JSON is:
+{ "number": { "one": 20} }
+You can prevent this behavior by selecting Add Option > Support Dot Notation, and setting the Dot Notion field to off. Now the resulting JSON is:
+{ "number.one": 20 }
+
+
+
+
+
+Execute Sub-workflow#
+Use the Execute Sub-workflow node to run a different workflow on the host machine that runs n8n.
+Node parameters#
+Source#
+Select where the node should get the sub-workflow's information from:
+Database: Select this option to load the workflow from the database by ID. You must also enter either:
+From list: Select the workflow from a list of workflows available to your account.
+Workflow ID: Enter the ID for the workflow. The URL of the workflow contains the ID after /workflow/. For example, if the URL of a workflow is https://my-n8n-acct.app.n8n.cloud/workflow/abCDE1f6gHiJKL7, the Workflow ID is abCDE1f6gHiJKL7.
+Local File: Select this option to load the workflow from a locally saved JSON file. You must also enter:
+Workflow Path: Enter the path to the local JSON workflow file you want the node to execute.
+Parameter: Select this option to load the workflow from a parameter. You must also enter:
+Workflow JSON: Enter the JSON code you want the node to execute.
+URL: Select this option to load the workflow from a URL. You must also enter:
+Workflow URL: Enter the URL you want to load the workflow from.
+Workflow Inputs#
+If you select a sub-workflow using the database and From list options, the sub-workflow's input items will automatically display, ready for you to fill in or map values.
+You can optionally remove requested input items, in which case the sub-workflow receives null as the item's value. You can also enable Attempt to convert types to try to automatically convert data to the sub-workflow item's requested type.
+Input items won't appear if the sub-workflow's Workflow Input Trigger node uses the "Accept all data" input data mode.
+Mode#
+Use this parameter to control the execution mode for the node. Choose from these options:
+Run once with all items: Pass all input items into a single execution of the node.
+Run once for each item: Execute the node once for each input item in turn.
+Node options#
+This node includes one option: Wait for Sub-Workflow Completion. This lets you control whether the main workflow should wait for the sub-workflow's completion before moving on to the next step (turned on) or whether the main workflow should continue without waiting (turned off).
+
+
+
+
+
+HTTP Request node#
+The HTTP Request node is one of the most versatile nodes in n8n. It allows you to make HTTP requests to query data from any app or service with a REST API. You can use the HTTP Request node a regular node or attached to an AI agent to use as a tool.
+When using this node, you're creating a REST API call. You need some understanding of basic API terminology and concepts.
+There are two ways to create an HTTP request: configure the node parameters or import a curl command.
+Node parameters#
+Method#
+Select the method to use for the request:
+DELETE
+GET
+HEAD
+OPTIONS
+PATCH
+POST
+PUT
+URL#
+Enter the endpoint you want to use.
+Authentication#
+n8n recommends using the Predefined Credential Type option when it's available. It offers an easier way to set up and manage credentials, compared to configuring generic credentials.
+Predefined credentials#
+Credentials for integrations supported by n8n, including both built-in and community nodes. Use Predefined Credential Type for custom operations without extra setup. Refer to Custom API operations for more information.
+Generic credentials#
+Credentials for integrations not supported by n8n. You'll need to manually configure the authentication process, including specifying the required API endpoints, necessary parameters, and the authentication method.
+You can select one of the following methods:
+Basic auth
+Custom auth
+Digest auth
+Header auth
+OAuth1 API
+OAuth2 API
+Query auth
+Refer to HTTP request credentials for more information on setting up each credential type.
+Send Query Parameters#
+Query parameters act as filters on HTTP requests. If the API you're interacting with supports them and the request you're making needs a filter, turn this option on.
+Specify your query parameters using one of the available options:
+Using Fields Below: Enter Name/Value pairs of Query Parameters. To enter more query parameter name/value pairs, select Add Parameter. The name is the name of the field you're filtering on, and the value is the filter value.
+Using JSON: Enter JSON to define your query parameters.
+Refer to your service's API documentation for detailed guidance.
+Send Headers#
+Use this parameter to send headers with your request. Headers contain metadata or context about your request.
+Specify Headers using one of the available options:
+Using Fields Below: Enter Name/Value pairs of Header Parameters. To enter more header parameter name/value pairs, select Add Parameter. The name is the header you wish to set, and the value is the value you want to pass for that header.
+Using JSON: Enter JSON to define your header parameters.
+Refer to your service's API documentation for detailed guidance.
+Send Body#
+If you need to send a body with your API request, turn this option on.
+Then select the Body Content Type that best matches the format for the body content you wish to send.
+Form URLencoded#
+Use this option to send your body as application/x-www-form-urlencoded.
+Specify Body using one of the available options:
+Using Fields Below: Enter Name/Value pairs of Body Parameters. To enter more body parameter name/value pairs, select Add Parameter. The name should be the form field name, and the value is what you wish to set that field to.
+Using Single Field: Enter your name/value pairs in a single Body parameter with format fieldname1=value1&fieldname2=value2.
+Refer to your service's API documentation for detailed guidance.
+Form-Data#
+Use this option to send your body as multipart/form-data.
+Configure your Body Parameters by selecting the Parameter Type:
+Choose Form Data to enter Name/Value pairs.
+Choose n8n Binary File to pull the body from a file the node has access to.
+Name: Enter the ID of the field to set.
+Input Data Field Name: Enter the name of the incoming field containing the binary file data you want to process.
+Select Add Parameter to enter more parameters.
+Refer to your service's API documentation for detailed guidance.
+JSON#
+Use this option to send your body as JSON.
+Specify Body using one of the available options:
+Using Fields Below: Enter Name/Value pairs of Body Parameters. To enter more body parameter name/value pairs, select Add Parameter.
+Using JSON: Enter JSON to define your body.
+Refer to your service's API documentation for detailed guidance.
+n8n Binary File#
+Use this option to send the contents of a file stored in n8n as the body.
+Enter the name of the incoming field that contains the file as the Input Data Field Name.
+Refer to your service's API documentation for detailed guidance on how to format the file.
+Raw#
+Use this option to send raw data in the body.
+Content Type: Enter the Content-Type header to use for the raw body content. Refer to the IANA Media types documentation for a full list of MIME content types.
+Body: Enter the raw body content to send.
+Refer to your service's API documentation for detailed guidance.
+Node options#
+Select Add Option to view and select these options. Options are available to all parameters unless otherwise noted.
+Array Format in Query Parameters#
+Option availability
+This option is only available when you turn on Send Query Parameters.
+Use this option to control the format for arrays included in query parameters. Choose from these options:
+No Brackets: Arrays will format as the name=value for each item in the array, for example: foo=bar&foo=qux.
+Brackets Only: The node adds square brackets after each array name, for example: foo[]=bar&foo[]=qux.
+Brackets with Indices: The node adds square brackets with an index value after each array name, for example: foo[0]=bar&foo[1]=qux.
+Refer to your service's API documentation for guidance on which option to use.
+Batching#
+Control how to batch large numbers of input items:
+Items per Batch: Enter the number of input items to include in each batch.
+Batch Interval: Enter the time to wait between each batch of requests in milliseconds. Enter 0 for no batch interval.
+Ignore SSL Issues#
+By default, n8n only downloads the response if SSL certificate validation succeeds. If you'd like to download the response even if SSL certificate validation fails, turn this option on.
+Lowercase Headers#
+Choose whether to lowercase header names (turned on, default) or not (turned off).
+Redirects#
+Choose whether to follow redirects (turned on by default) or not (turned off). If turned on, enter the maximum number of redirects the request should follow in Max Redirects.
+Response#
+Use this option to set some details about the expected API response, including:
+Include Response Headers and Status: By default, the node returns only the body. Turn this option on to return the full response (headers and response status code) as well as the body.
+Never Error: By default, the node returns success only when the response returns with a 2xx code. Turn this option on to return success regardless of the code returned.
+Response Format: Select the format in which the data gets returned. Choose from:
+Autodetect (default): The node detects and formats the response based on the data returned.
+File: Select this option to put the response into a file. Enter the field name where you want the file returned in Put Output in Field.
+JSON: Select this option to format the response as JSON.
+Text: Select this option to format the response as plain text. Enter the field name where you want the file returned in Put Output in Field.
+Pagination#
+Use this option to paginate results, useful for handling query results that are too big for the API to return in a single call.
+Inspect the API data first
+Some options for pagination require knowledge of the data returned by the API you're using. Before setting up pagination, either check the API documentation, or do an API call without pagination, to see the data it returns.
+Understand pagination
+Configure the pagination settings:
+Pagination Mode:
+Off: Turn off pagination.
+Update a Parameter in Each Request: Use this when you need to dynamically set parameters for each request.
+Response Contains Next URL: Use this when the API response includes the URL of the next page. Use an expression to set Next URL.
+For example setups, refer to HTTP Request node cookbook | Pagination.
+n8n provides built-in variables for working with HTTP node requests and responses when using pagination:
+Variable
+Description
+$pageCount
+The pagination count. Tracks how many pages the node has fetched.
+$request
+The request object sent by the HTTP node.
+$response
+The response object from the HTTP call. Includes $response.body, $response.headers, and $response.statusCode. The contents of body and headers depend on the data sent by the API.
+
+API differences
+Different APIs implement pagination in different ways. Check the API documentation for the API you're using for details. You need to find out things like:
+Does the API provide the URL for the next page?
+Are there API-specific limits on page size or page number?
+The structure of the data that the API returns.
+Proxy#
+Use this option if you need to specify an HTTP proxy.
+Enter the Proxy the request should use.
+Timeout#
+Use this option to set how long the node should wait for the server to send response headers (and start the response body). The node aborts requests that exceed this value for the initial response.
+Enter the Timeout time to wait in milliseconds.
+Tool-only options#
+The following options are only available when attached to an AI agent as a tool.
+Optimize Response#
+Whether to optimize the tool response to reduce the amount of data passed to the LLM. Optimizing the response can reduce costs and can help the LLM ignore unimportant details, often leading to better results.
+When optimizing responses, you select an expected response type, which determines other options you can configure. The supported response types are:
+JSON#
+When expecting a JSON response, you can configure which parts of the JSON data to use as a response with the following choices:
+Field Containing Data: This field identifies a specific part of the JSON object that contains your relevant data. You can leave this blank to use the entire response.
+Include Fields: This is how you choose which fields you want in your response object. There are three choices:
+All: Include all fields in the response object.
+Selected: Include only the fields specified below.
+Fields: A comma-separated list of fields to include in the response. You can use dot notation to specify nested fields. You can drag fields from the Input panel to add them to the field list.
+Exclude: Include all fields except the fields specified below.
+Fields: A comma-separated list of fields to exclude from the response. You can use dot notation to specify nested fields. You can drag fields from the Input panel to add them to the field list.
+HTML#
+When expecting HTML, you can identify the part of an HTML document relevant to the LLM and optimize the response with the following options:
+Selector (CSS): A specific element or element type to include in the response HTML. Uses the body element by default.
+Return Only Content: Whether to strip HTML tags and attributes from the response, leaving only the actual content. This uses fewer tokens and may be easier for the model to understand.
+Elements To Omit: A comma-separated list of CSS selectors to exclude when extracting content.
+Truncate Response: Whether to limit the response size to save tokens.
+Max Response Characters: The maximum number of characters to include in the HTML response. The default value is 1000.
+Text#
+When expecting a generic Text response, you can optimize the results with the following options:
+Truncate Response: Whether to limit the response size to save tokens.
+Max Response Characters: The maximum number of characters to include in the HTML response. The default value is 1000.
+Import curl command#
+curl is a command line tool and library for transferring data with URLs.
+You can use curl to call REST APIs. If the API documentation of the service you want to use provides curl examples, you can copy them out of the documentation and into n8n to configure the HTTP Request node.
+Import a curl command:
+From the HTTP Request node's Parameters tab, select Import cURL. The Import cURL command modal opens.
+Paste your curl command into the text box.
+Select Import. n8n loads the request configuration into the node fields. This overwrites any existing configuration.
+
+
+
+
+
+Loop Over Items#
+The Loop Over Items node helps you loop through data when needed.
+The node saves the original incoming data, and with each iteration, returns a predefined amount of data through the loop output.
+When the node execution completes, it combines all of the processed data and returns it through the done output.
+When to use the Loop Over Items node#
+By default, n8n nodes are designed to process a list of input items (with some exceptions, detailed below). Depending on what you're trying to achieve, you often don't need the Loop Over Items node in your workflow. You can learn more about how n8n processes multiple items on the looping in n8n page.
+These links highlight some of the cases where the Loop Over Items node can be useful:
+Loop until all items are processed: describes how the Loop Over Items node differs from normal item processing and when you might want to incorporate this node.
+Node exceptions: outlines specific cases and nodes where you may need to use the Loop Over Items node to manually build looping logic.
+Avoiding rate limiting: demonstrates how to batch API requests to avoid rate limits from other services.
+Node parameters#
+Batch Size#
+Enter the number of items to return with each call.
+Node options#
+Reset#
+If turned on, the node will reset with the current input-data newly initialized with each loop. Use this when you want the Loop Over Items node to treat incoming data as a new set of data instead of a continuation of previous items.
+For example, you can use the Loop Over Items node with the reset option and an If node to query a paginated service when you don't know how many pages you need in advance. The loop queries pages one at a time, performs any processing, and increments the page number. The loop reset ensures the loop recognizes each iteration as a new set of data. The If node evaluates an exit condition to decide whether to perform another iteration or not.
+Include a valid termination condition
+For workflows like the example described above, it's critical to include a valid termination condition for the loop. If your termination condition never matches, your workflow execution will get stuck in an infinite loop.
+When enabled, you can adjust the reset conditions by switching the parameter representation from Fixed to Expression. The results of your expression evaluation determine when the node will reset item processing.
+
+
+
+
+
+Merge#
+Use the Merge node to combine data from multiple streams, once data of all streams is available.
+Node parameters#
+You can specify how the Merge node should combine data from different data streams by choosing a Mode:
+Append#
+Keep data from all inputs. Choose a Number of Inputs to output items of each input, one after another. The node waits for the execution of all connected inputs.
+Combine#
+Combine data from two inputs. Select an option in Combine By to determine how you want to merge the input data.
+Matching Fields#
+Compare items by field values. Enter the fields you want to compare in Fields to Match.
+n8n's default behavior is to keep matching items. You can change this using the Output Type setting:
+Keep Matches: Merge items that match. This is like an inner join.
+Keep Non-Matches: Merge items that don't match.
+Keep Everything: Merge items together that do match and include items that don't match. This is like an outer join.
+Enrich Input 1: Keep all data from Input 1, and add matching data from Input 2. This is like a left join.
+Enrich Input 2: Keep all data from Input 2, and add matching data from Input 1. This is like a right join.
+
+
+Position#
+Combine items based on their order. The item at index 0 in Input 1 merges with the item at index 0 in Input 2, and so on.
+All Possible Combinations#
+Output all possible item combinations, while merging fields with the same name.
+Combine mode options#
+When merging data by Mode > Combine, you can set these Options:
+Clash Handling: Choose how to merge when data streams clash, or when there are sub-fields. Refer to Clash handling for details.
+Fuzzy Compare: Whether to tolerate type differences when comparing fields (enabled), or not (disabled, default). For example, when you enable this, n8n treats "3" and 3 as the same.
+Disable Dot Notation: This prevents accessing child fields using parent.child in the field name.
+Multiple Matches: Choose how n8n handles multiple matches when comparing data streams.
+Include All Matches: Output multiple items if there are multiple matches, one for each match.
+Include First Match Only: Keep the first item per match and discard the remaining multiple matches.
+Include Any Unpaired Items: Choose whether to keep or discard unpaired items when merging by position. The default behavior is to leave out the items without a match.
+Clash Handling#
+If multiple items at an index have a field with the same name, this is a clash. For example, if all items in both Input 1 and Input 2 have a field named language, these fields clash. By default, n8n prioritizes Input 2, meaning if language has a value in Input 2, n8n uses that value when merging the items.
+You can change this behavior by selecting Options > Clash Handling:
+When Field Values Clash: Choose which input to prioritize, or choose Always Add Input Number to Field Names to keep all fields and values, with the input number appended to the field name to show which input it came from.
+Merging Nested Fields
+Deep Merge: Merge properties at all levels of the items, including nested objects. This is useful when dealing with complex, nested data structures where you need to ensure the merging of all levels of nested properties.
+Shallow Merge: Merge properties at the top level of the items only, without merging nested objects. This is useful when you have flat data structures or when you only need to merge top-level properties without worrying about nested properties.
+
+
+Merging data streams with uneven numbers of items#
+The items passed into Input 1 of the Merge node will take precedence. For example, if the Merge node receives five items in Input 1 and 10 items in Input 2, it only processes five items. The remaining five items from Input 2 aren't processed.
+Branch execution with If and Merge nodes#
+If you add a Merge node to a workflow containing an If node, it can result in both output data streams of the If node executing.
+One data stream triggers the Merge node, which then goes and executes the other data stream.
+For example, in the screenshot below there's a workflow containing an Edit Fields node, If node, and Merge node. The standard If node behavior is to execute one data stream (in the screenshot, this is the true output). However, due to the Merge node, both data streams execute, despite the If node not sending any data down the false data stream.
+
+
+
+
+
+Switch#
+Use the Switch node to route a workflow conditionally based on comparison operations. It's similar to the IF node, but supports multiple output routes.
+Node parameters#
+Select the Mode the node should use:
+Rules: Select this mode to build a matching rule for each output.
+Expression: Select this mode to write an expression to return the output index programmatically.
+Node configuration depends on the Mode you select.
+Rules#
+To configure the node with this operation, use these parameters:
+Create Routing Rules to define comparison conditions.
+Use the data type dropdown to select the data type and comparison operation type for your condition. For example, to create a rules for dates after a particular date, select Date & Time > is after.
+The fields and values to enter into the condition change based on the data type and comparison you select. Refer to Available data type comparisons for a full list of all comparisons by data type.
+Rename Output: Turn this control on to rename the output field to put matching data into. Enter your desired Output Name.
+Select Add Routing Rule to add more rules.
+Rule options#
+You can further configure the node with this operation using these Options:
+Fallback Output: Choose how to route the workflow when an item doesn't match any of the rules or conditions.
+None: Ignore the item. This is the default behavior.
+Extra Output: Send items to an extra, separate output.
+Output 0: Send items to the same output as those matching the first rule.
+Ignore Case: Set whether to ignore letter case when evaluating conditions (turned on) or enforce letter case (turned off).
+Less Strict Type Validation: Set whether you want n8n to attempt to convert value types based on the operator you choose (turned on) or not (turned off).
+Send data to all matching outputs: Set whether to send data to all outputs meeting conditions (turned on) or whether to send the data to the first output matching the conditions (turned off).
+Expression#
+To configure the node with this operation, use these parameters:
+Number of Outputs: Set how many outputs the node should have.
+Output Index: Create an expression to calculate which input item should be routed to which output. The expression must return a number.
+
+
+
+

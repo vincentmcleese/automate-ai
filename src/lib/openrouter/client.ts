@@ -126,6 +126,10 @@ export class OpenRouterClient {
       // Clean common smart quotes
       jsonString = jsonString.replace(/”|“/g, '"')
 
+      // Remove invalid comment-like lines (e.g., "... // some text")
+      // These are hallucinations from the model and break JSON parsing.
+      jsonString = jsonString.replace(/^\s*\.\.\..*$/gm, '')
+
       // Escape unescaped double quotes inside n8n expressions {{...}}
       jsonString = jsonString.replace(/\{\{([\s\S]+?)\}\}/g, (match, innerContent) => {
         const fixedInnerContent = innerContent.replace(/"/g, '\\"')
