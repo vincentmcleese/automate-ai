@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'supabase.in',
       },
+      {
+        protocol: 'https',
+        hostname: 'logo.clearbit.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatar.vercel.sh',
+      },
       // Add specific pattern for your Supabase project
       {
         protocol: 'https',

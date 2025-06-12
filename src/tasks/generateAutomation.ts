@@ -6,6 +6,8 @@ type AutomationMetadata = {
   title: string
   description: string
   tags: string[]
+  complexity: 'simple' | 'moderate' | 'complex'
+  estimated_time_hours: number
 }
 
 type SystemPromptInfo = {
@@ -116,7 +118,7 @@ export async function triggerAutomationGeneration(
       throw new Error(`Generation failed. Reasons: ${errorReasons.join(', ')}`)
     }
 
-    const { title, description, tags } = metadata
+    const { title, description, tags, complexity, estimated_time_hours } = metadata
     // Update the automation with the generated data
     const { error: updateError } = await supabase
       .from('automations')
@@ -126,6 +128,8 @@ export async function triggerAutomationGeneration(
         tags,
         generated_json: generated_json,
         status: 'completed',
+        complexity,
+        estimated_time_hours,
         // Now including the prompt info
         prompt_id: workflowPromptInfo.id,
         prompt_version: workflowPromptInfo.version,

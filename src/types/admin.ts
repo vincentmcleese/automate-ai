@@ -224,6 +224,35 @@ export interface Automation {
   created_at: string
   updated_at: string
   error_message?: string | null
+  user_name?: string
+  user_avatar_url?: string | null
+  tools?: Tool[]
+  complexity?: string | null
+  estimated_time_hours?: number | null
+  creator_rank?: number | null
+}
+
+export interface RawAutomation {
+  id: string
+  title: string | null
+  description: string | null
+  user_input: string
+  status: 'pending' | 'generating' | 'completed' | 'failed'
+  created_at: string
+  updated_at: string
+  user_id: string
+  user_name: string | null
+  user_email: string | null
+  user_avatar_url: string | null
+  image_url: string | null
+  tags: string[] | null
+  rank?: number | null
+}
+
+export interface Tool {
+  id: string
+  name: string
+  logo_url: string | null
 }
 
 export interface CreateAutomationData {
@@ -242,6 +271,7 @@ export interface AutomationUser {
   email: string
   name: string
   avatar_url?: string
+  rank?: number | null
 }
 
 export interface AutomationOverview {
@@ -256,6 +286,7 @@ export interface AutomationOverview {
   user_email?: string
   user_avatar_url?: string
   user: AutomationUser
+  tags?: string[] | null
 }
 
 export interface AutomationsResponse {

@@ -1,333 +1,141 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
-import { WorkflowValidation } from '@/components/WorkflowValidation'
-import { WorkflowValidationResult } from '@/types/admin'
-import {
-  Sparkles,
-  Zap,
-  ArrowRight,
-  FileText,
-  FileJson2,
-  Rocket,
-  BrainCircuit,
-  ClipboardCheck,
-  GitMerge,
-  CheckCircle2,
-} from 'lucide-react'
 import { toast } from 'sonner'
+import { WorkflowValidationResult } from '@/types/admin'
+import { AnimatedLoading } from '@/components/generate/AnimatedLoading'
+import { ValidationResultsDisplay } from '@/components/generate/ValidationResultsDisplay'
+import { KeyBenefitsSection } from '@/components/landing/KeyBenefitsSection'
+import { HeroSection } from '@/components/landing/HeroSection'
+import { ArrowRight } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Textarea } from '@/components/ui/textarea'
 
-export default function Home() {
-  const [workflow, setWorkflow] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isRevalidating, setIsRevalidating] = useState(false)
-  const [validationResult, setValidationResult] = useState<
-    (WorkflowValidationResult & { user_input: string }) | null
-  >(null)
-  const [hasValidated, setHasValidated] = useState(false)
+type PageState = 'idle' | 'validating' | 'reviewing' | 'creating'
 
-  const validateWorkflow = async (description: string) => {
+export default function HomePage() {
+  const router = useRouter()
+  const [pageState, setPageState] = useState<PageState>('idle')
+  const [prompt, setPrompt] = useState('')
+  const [validationResult, setValidationResult] = useState<WorkflowValidationResult | null>(null)
+  const [refinedPrompt, setRefinedPrompt] = useState('')
+
+  const handleValidate = useCallback(async () => {
+    if (!prompt.trim()) {
+      toast.error('Please enter a workflow description.')
+      return
+    }
+    setPageState('validating')
     try {
       const response = await fetch('/api/workflow/validate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          workflow_description: description,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workflow_description: prompt }),
       })
-
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to validate workflow')
+        throw new Error(errorData.error || 'Validation failed')
       }
-
       const data = await response.json()
-      return data.validation
+      setValidationResult(data.validation)
+      setRefinedPrompt(prompt)
+      setPageState('reviewing')
     } catch (error) {
-      console.error('Error validating workflow:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to validate workflow')
-      throw error
+      toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
+      setPageState('idle')
     }
-  }
+  }, [prompt])
 
-  const handleAutomate = async () => {
-    if (!workflow.trim()) return
-
-    setIsLoading(true)
+  const handleCreateAutomation = useCallback(async () => {
+    setPageState('creating')
     try {
-      const validation = await validateWorkflow(workflow)
-      setValidationResult({ ...validation, user_input: workflow })
-      setHasValidated(true)
-
-      if (validation.is_valid) {
-        toast.success('Workflow validation complete! Ready for automation.')
-      } else {
-        toast.warning('Workflow needs refinement. Check the suggestions below.')
+      const response = await fetch('/api/automations/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userInput: refinedPrompt, selectedTools: {} }),
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create automation')
       }
-    } catch {
-      // Error already handled in validateWorkflow
-    } finally {
-      setIsLoading(false)
+      const data = await response.json()
+      toast.success('Automation creation started!')
+      router.push(`/automations/${data.automationId}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
+      setPageState('reviewing')
     }
-  }
+  }, [refinedPrompt, router])
 
-  const handleRevalidate = async () => {
-    if (!workflow.trim()) return
-
-    setIsRevalidating(true)
-    try {
-      const validation = await validateWorkflow(workflow)
-      setValidationResult({ ...validation, user_input: workflow })
-
-      if (validation.is_valid) {
-        toast.success('Revalidation complete! Workflow is ready for automation.')
-      } else {
-        toast.warning('Workflow still needs refinement. Check the updated suggestions.')
-      }
-    } catch {
-      // Error already handled in validateWorkflow
-    } finally {
-      setIsRevalidating(false)
-    }
-  }
-
-  const handleClear = () => {
-    setWorkflow('')
-    setValidationResult(null)
-    setHasValidated(false)
-  }
+  const isLoading = pageState === 'validating' || pageState === 'creating'
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#f8f9fa] p-4">
-      <div className="mx-auto w-full max-w-4xl space-y-8 text-center">
-        {/* Hero Section */}
-        <div className="space-y-6">
-          <div className="mb-4 flex items-center justify-center space-x-2">
-            <Sparkles className="h-8 w-8 text-[#32da94]" />
-            <h1 className="text-4xl font-bold text-[#000000] md:text-6xl">AutomateAI</h1>
-            <Zap className="h-8 w-8 text-[#32da94]" />
-          </div>
-        </div>
-
-        {/* Main Input Card */}
-        <Card className="border border-[#e5e7eb] shadow-lg transition-shadow duration-300 hover:shadow-xl">
-          <CardContent className="p-8 md:p-12">
-            <div className="space-y-6">
-              <div className="text-left">
-                <label
-                  htmlFor="workflow-input"
-                  className="mb-3 block text-lg font-semibold text-[#000000]"
-                >
-                  Build Powerful Automations with Just a Description
-                </label>
-                <p className="mb-4 text-sm text-[#6b7280]">
-                  Describe any workflow in plain English and get instant automation blueprints -
-                  complete with JSON configs and step-by-step implementation guides. No coding
-                  required.
-                </p>
-              </div>
-
-              <div className="relative">
-                <Textarea
-                  id="workflow-input"
-                  placeholder="Describe the automation you want to build... (e.g., 'When a new lead submits a form, add them to my CRM, send a welcome email, and notify my sales team on Slack')"
-                  value={workflow}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setWorkflow(e.target.value)
-                  }
-                  className="focus:ring-opacity-20 min-h-[120px] resize-none border-2 border-[#e5e7eb] text-base transition-colors duration-200 focus:border-[#32da94] focus:ring-2 focus:ring-[#32da94]"
-                  disabled={isLoading || isRevalidating}
-                />
-
-                {/* Character count */}
-                <div className="absolute right-3 bottom-3 text-xs text-[#6b7280]">
-                  {workflow.length} characters
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                {!hasValidated ? (
-                  <>
-                    <Button
-                      onClick={handleAutomate}
-                      disabled={!workflow.trim() || isLoading}
-                      className="w-full rounded-lg bg-[#32da94] px-8 py-3 text-lg font-semibold text-white transition-colors duration-200 hover:bg-[#2bb885] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                      size="lg"
-                    >
-                      {isLoading ? (
-                        <>
-                          <div className="mr-2 h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
-                          Validating...
-                        </>
-                      ) : (
-                        <>
-                          Generate Automation
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </>
-                      )}
-                    </Button>
-
-                    {workflow.trim() && !isLoading && (
-                      <Button
-                        variant="outline"
-                        onClick={handleClear}
-                        className="w-full border-[#e5e7eb] text-[#6b7280] hover:bg-[#f8f9fa] sm:w-auto"
-                      >
-                        Clear
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={handleClear}
-                    disabled={isLoading || isRevalidating}
-                    className="w-full border-[#e5e7eb] text-[#6b7280] hover:bg-[#f8f9fa] sm:w-auto"
-                  >
-                    Start Over
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Validation Results */}
-        {validationResult && (
-          <WorkflowValidation
-            validation={validationResult}
-            isRevalidating={isRevalidating}
-            onRevalidate={handleRevalidate}
+    <div className="bg-background min-h-screen">
+      <main className="container mx-auto max-w-4xl px-4 py-12">
+        {(pageState === 'idle' || pageState === 'reviewing') && (
+          <HeroSection
+            title={
+              pageState === 'idle'
+                ? 'Build Automations with a Single Prompt'
+                : 'Refine Your Workflow'
+            }
+            description={
+              pageState === 'idle'
+                ? 'Describe your workflow in plain English. Our AI will analyze it, create a step-by-step plan, and generate the production-ready JSON for you.'
+                : 'Based on the AI-generated plan below, you can edit your prompt for a better result.'
+            }
+            prompt={pageState === 'idle' ? prompt : refinedPrompt}
+            setPrompt={pageState === 'idle' ? setPrompt : setRefinedPrompt}
+            onGenerate={handleValidate}
+            loading={isLoading}
+            buttonText={pageState === 'idle' ? 'Generate My Automation' : 'Re-Analyze Plan'}
           />
         )}
 
-        {/* How It Works */}
-        <div className="mt-16 w-full text-center">
-          <h2 className="mb-12 text-3xl font-bold text-[#000000]">How It Works</h2>
-          <div className="relative grid gap-8 md:grid-cols-3">
-            {/* Connector Line */}
-            <div className="absolute top-8 left-0 hidden h-0.5 w-full bg-gray-200 md:block">
-              <div className="absolute top-1/2 left-1/2 h-full w-2/3 -translate-x-1/2 -translate-y-1/2 border-t-2 border-dashed border-[#e5e7eb]"></div>
-            </div>
-            {/* Step 1 */}
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#32da94] text-white ring-8 ring-[#f8f9fa]">
-                <FileText className="h-8 w-8" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold text-[#000000]">
-                1. Describe What You Want
-              </h3>
-              <p className="text-base text-[#6b7280]">
-                Tell us your workflow in plain English - no technical knowledge needed.
-              </p>
-            </div>
+        {isLoading && (
+          <AnimatedLoading
+            text={
+              pageState === 'validating'
+                ? 'Analyzing your prompt...'
+                : 'Building your automation...'
+            }
+          />
+        )}
 
-            {/* Step 2 */}
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#32da94] text-white ring-8 ring-[#f8f9fa]">
-                <FileJson2 className="h-8 w-8" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold text-[#000000]">2. Get Your Files</h3>
-              <p className="text-base text-[#6b7280]">
-                Receive a JSON file and setup guide instantly.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#32da94] text-white ring-8 ring-[#f8f9fa]">
-                <Rocket className="h-8 w-8" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold text-[#000000]">3. Upload & Go</h3>
-              <p className="text-base text-[#6b7280]">
-                Import the JSON into n8n, Zapier, or any automation platform. Configure and
-                you&apos;re done.
-              </p>
-            </div>
+        {pageState === 'reviewing' && validationResult && (
+          <div className="mt-8 space-y-8">
+            <ValidationResultsDisplay results={validationResult} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Refine Your Prompt (Optional)</CardTitle>
+                <CardDescription>
+                  You can edit your prompt for a better result, or generate as is.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  rows={4}
+                  value={refinedPrompt}
+                  onChange={e => setRefinedPrompt(e.target.value)}
+                  className="border-border focus-visible:ring-primary text-base"
+                />
+              </CardContent>
+            </Card>
+            <Button
+              onClick={handleCreateAutomation}
+              className="w-full text-lg"
+              disabled={isLoading}
+            >
+              <ArrowRight className="mr-2 h-5 w-5" />
+              {isLoading ? 'Generating...' : 'Yes, Generate this Automation!'}
+            </Button>
           </div>
-        </div>
+        )}
 
-        {/* Features Section */}
-        <div className="mt-24 w-full text-left">
-          <h2 className="mb-12 text-center text-3xl font-bold text-[#000000]">
-            Everything You Need to Automate
-          </h2>
-          <div className="grid gap-8 md:grid-cols-3">
-            <Card className="transform border-2 border-[#e5e7eb] text-center shadow-lg transition-all duration-300 hover:-translate-y-2 hover:border-[#32da94] hover:shadow-2xl">
-              <CardContent className="flex flex-col items-center p-8">
-                <BrainCircuit className="mb-4 h-10 w-10 text-[#2bb885]" />
-                <h3 className="mb-2 text-xl font-semibold text-[#000000]">
-                  AI-Powered Automation Builder
-                </h3>
-                <p className="text-base text-[#6b7280]">
-                  Transform natural language into production-ready automation workflows.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="transform border-2 border-[#e5e7eb] text-center shadow-lg transition-all duration-300 hover:-translate-y-2 hover:border-[#32da94] hover:shadow-2xl">
-              <CardContent className="flex flex-col items-center p-8">
-                <ClipboardCheck className="mb-4 h-10 w-10 text-[#2bb885]" />
-                <h3 className="mb-2 text-xl font-semibold text-[#000000]">
-                  Instant Blueprint Generation
-                </h3>
-                <p className="text-base text-[#6b7280]">
-                  Get JSON configurations and detailed implementation guides in seconds.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="transform border-2 border-[#e5e7eb] text-center shadow-lg transition-all duration-300 hover:-translate-y-2 hover:border-[#32da94] hover:shadow-2xl">
-              <CardContent className="flex flex-col items-center p-8">
-                <GitMerge className="mb-4 h-10 w-10 text-[#2bb885]" />
-                <h3 className="mb-2 text-xl font-semibold text-[#000000]">Universal Integration</h3>
-                <p className="text-base text-[#6b7280]">
-                  Works with any platform—n8n, Make, or custom solutions.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Key Benefits Section */}
-        <div className="mt-24 w-full">
-          <Card className="border-2 border-[#e5e7eb] bg-white p-8 shadow-xl md:p-12">
-            <h2 className="mb-8 text-center text-3xl font-bold text-[#000000]">Key Benefits</h2>
-            <ul className="space-y-6">
-              <li className="flex items-start">
-                <CheckCircle2 className="mt-1 mr-4 h-6 w-6 flex-shrink-0 text-[#32da94]" />
-                <span className="text-lg text-[#6b7280]">
-                  <strong className="font-semibold text-black">
-                    Go from idea to implementation in minutes,
-                  </strong>{' '}
-                  not days. Radically speed up your workflow development.
-                </span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="mt-1 mr-4 h-6 w-6 flex-shrink-0 text-[#32da94]" />
-                <span className="text-lg text-[#6b7280]">
-                  <strong className="font-semibold text-black">
-                    Perfect for non-technical users and developers alike.
-                  </strong>{' '}
-                  An intuitive interface for everyone.
-                </span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="mt-1 mr-4 h-6 w-6 flex-shrink-0 text-[#32da94]" />
-                <span className="text-lg text-[#6b7280]">
-                  <strong className="font-semibold text-black">
-                    Export-ready configurations for popular platforms.
-                  </strong>{' '}
-                  Get started instantly with n8n, Zapier, and more.
-                </span>
-              </li>
-            </ul>
-          </Card>
-        </div>
-      </div>
+        {pageState === 'idle' && <KeyBenefitsSection />}
+      </main>
     </div>
   )
 }

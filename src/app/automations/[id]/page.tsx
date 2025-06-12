@@ -1,8 +1,6 @@
 import { Suspense } from 'react'
-import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { Automation } from '@/types/admin'
 import { AutomationContent } from '@/components/automations/AutomationContent'
+import { createClient } from '@/lib/supabase/server'
 
 interface AutomationPageProps {
   params: Promise<{
@@ -10,41 +8,21 @@ interface AutomationPageProps {
   }>
 }
 
-async function getAutomation(id: string): Promise<Automation | null> {
-  const supabase = await createClient()
-  const { data: automation, error } = await supabase
-    .from('automations')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error) {
-    console.error('Error fetching initial automation:', error.message)
-    return null
-  }
-  return automation
-}
-
+// This page is now a simple shell. The client component will handle all data fetching.
 export default async function AutomationPage({ params }: AutomationPageProps) {
   const { id } = await params
-  const automation = await getAutomation(id)
-
-  if (!automation) {
-    notFound()
-  }
-
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#f8f9fa]">
-          <div className="flex items-center space-x-2 text-[#6b7280]">
-            <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-[#32da94]"></div>
+        <div className="bg-background flex min-h-screen items-center justify-center">
+          <div className="text-text-secondary flex items-center space-x-2">
+            <div className="border-brand-primary h-6 w-6 animate-spin rounded-full border-b-2"></div>
             <span>Loading automation...</span>
           </div>
         </div>
       }
     >
-      <AutomationContent initialAutomation={automation} />
+      <AutomationContent automationId={id} />
     </Suspense>
   )
 }
