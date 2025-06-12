@@ -125,7 +125,7 @@ export default function HomePage() {
             </Card>
             <Button
               onClick={handleCreateAutomation}
-              className="w-full text-lg"
+              className="w-full bg-[#32da94] text-lg text-white hover:bg-[#2bb885]"
               disabled={isLoading}
             >
               <ArrowRight className="mr-2 h-5 w-5" />

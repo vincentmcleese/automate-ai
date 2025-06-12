@@ -59,7 +59,11 @@ export function HeroSection({
             onChange={e => setPrompt(e.target.value)}
             className="border-border focus-visible:ring-primary text-base"
           />
-          <Button onClick={onGenerate} disabled={loading} className="mt-4 w-full text-lg">
+          <Button
+            onClick={onGenerate}
+            disabled={loading}
+            className="mt-4 w-full bg-[#32da94] text-lg text-white hover:bg-[#2bb885]"
+          >
             <Wand2 className="mr-2 h-5 w-5" />
             {loading ? 'Analyzing...' : buttonText}
           </Button>

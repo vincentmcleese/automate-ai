@@ -3,3 +3,101 @@ description:
 globs:
 alwaysApply: false
 ---
+# 🎨 Style & Design Guide
+
+This guide provides comprehensive standards for the AutomateAI application, ensuring a consistent, modern, and polished user experience inspired by clean, professional designs like Lindy.ai.
+
+## Core Philosophy
+
+-   **Clarity and Simplicity**: Prioritize clean layouts and generous whitespace. Every element should have a purpose.
+-   **Consistency**: A consistent design language across the app builds trust and makes the UI more intuitive.
+-   **Professional & Inviting**: The design should feel professional, trustworthy, and approachable.
+
+---
+
+## 1. Color Palette
+
+The color scheme is designed to be clean, modern, and accessible.
+
+-   **Primary / Brand**: `#32da94` (The main call-to-action and highlight color)
+-   **Primary Dark (Hover)**: `#2bb885` (For hover states on primary buttons)
+-   **Background**: `#f8f9fa` (The default background for pages)
+-   **Card/Surface**: `#ffffff` (The background for cards and modals)
+-   **Text Primary**: `#000000` (For headlines and primary text)
+-   **Text Secondary**: `#6b7280` (For body copy, descriptions, and secondary info)
+-   **Border**: `#e5e7eb` (For card borders, inputs, and dividers)
+
+---
+
+## 2. Typography
+
+We will use a modern, sans-serif font for readability and a clean aesthetic.
+
+-   **Font Family**: `Inter` (or a similar system sans-serif font).
+-   **Headings**:
+    -   `h1` (Page Titles): `font-extrabold`, `text-4xl`
+    -   `h2` (Section Titles): `font-bold`, `text-2xl`
+    -   `h3` (Card Titles): `font-semibold`, `text-lg`
+-   **Body Text**: `font-normal`, `text-base` for primary content, `text-sm` for secondary content.
+-   **Line Height**: Use `leading-relaxed` for body text to improve readability.
+
+---
+
+## 3. Component Styling
+
+All components are built using **shadcn/ui** and styled with **Tailwind CSS**.
+
+### Buttons
+
+-   **Primary Button**:
+    -   `background`: `bg-brand-primary`
+    -   `hover`: `bg-brand-primary-dark`
+    -   `text`: `text-white`
+    -   `padding`: `px-4 py-2`
+    -   `border-radius`: `rounded-lg`
+    -   `transition`: Add a `transition-colors` for a smooth hover effect.
+-   **Secondary/Outline Button**:
+    -   `background`: `bg-transparent`
+    -   `border`: `border border-border`
+    -   `hover`: `bg-background` (a very light gray)
+    -   `text`: `text-text-primary`
+
+### Cards
+
+-   **Layout**: `bg-card/surface` with `border border-border`.
+-   **Spacing**: `padding` of `p-6`.
+-   **Shadow**: No shadow by default, but a `shadow-md` on `group-hover` for a subtle lift effect.
+-   **Border Radius**: `rounded-xl` for a slightly softer, more modern look.
+
+### Form Inputs
+
+-   **Default State**: `bg-card/surface` with `border border-border`.
+-   **Focus State**: On focus, apply a `ring-2 ring-brand-primary/50` to provide a clear visual cue.
+-   **Padding**: `px-3 py-2`.
+-   **Border Radius**: `rounded-lg`.
+
+---
+
+## 4. Layout & Spacing
+
+A consistent spacing system creates visual harmony.
+
+-   **Grid System**: Use an 8-point grid system. All spacing (margins, padding) should be in multiples of 4px or 8px.
+-   **Container Width**: Main content containers should use `max-w-7xl` for a comfortable reading width on large screens.
+-   **Whitespace**: Be generous with whitespace between sections and elements to reduce cognitive load and improve focus.
+
+---
+
+## 5. Iconography
+
+-   **Library**: Use **Lucide React** (`lucide-react`) exclusively for all icons to maintain a consistent visual style.
+-   **Standard Size**: Default icon size should be `h-5 w-5`.
+-   **Inline Icons**: When icons are next to text, use `flex` and `items-center` to ensure proper vertical alignment.
+
+---
+
+## 6. UI States & Animations
+
+-   **Loading States**: Use subtle animations, like a `spin` on a loading icon or a shimmering `skeleton` component for content that is loading.
+-   **Hover States**: All interactive elements (buttons, links, cards) must have a clear and consistent hover state (e.g., color change, underline, or subtle shadow).
+-   **Transitions**: Use `transition-all duration-200` to make hover and focus state changes feel smooth and responsive.
