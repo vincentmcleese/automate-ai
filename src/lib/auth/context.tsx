@@ -33,10 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser((session?.user as AuthUser) || null)
       setLoading(false)
 
-      // Only show success toast for actual sign-in events, not session restorations
-      if (event === 'SIGNED_IN' && initialLoadComplete.current) {
-        toast.success('Successfully signed in!')
-      } else if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT') {
         toast.success('Successfully signed out!')
       }
     })

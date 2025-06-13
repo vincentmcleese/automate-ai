@@ -4,6 +4,8 @@ import './globals.css'
 import { AuthProvider } from '@/lib/auth/context'
 import { Toaster } from '@/components/ui/sonner'
 import { Header } from '@/components/layout/header'
+import { ToastNotifier } from '@/components/layout/ToastNotifier'
+import { Suspense } from 'react'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -34,6 +36,9 @@ export default function RootLayout({
             <main>{children}</main>
           </div>
           <Toaster />
+          <Suspense>
+            <ToastNotifier />
+          </Suspense>
         </AuthProvider>
       </body>
     </html>
