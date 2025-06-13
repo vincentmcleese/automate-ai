@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/server'
 import { getOpenRouterClient } from '@/lib/openrouter/client'
 import { z } from 'zod'
 import { WorkflowStep } from '@/types/admin'
@@ -10,7 +10,7 @@ const requestBodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createAnonClient()
     const openRouterClient = getOpenRouterClient()
 
     const body = await request.json()

@@ -1,6 +1,18 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { createClient as createAdminBrowserClient } from '@supabase/supabase-js'
+import { createClient as createBrowserClient, type SupabaseClient } from '@supabase/supabase-js'
+
+let anonClient: SupabaseClient | undefined
+function createAnonClient() {
+  if (anonClient) {
+    return anonClient
+  }
+  anonClient = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  return anonClient
+}
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -29,12 +41,14 @@ export async function createClient() {
   )
 }
 
+export { createAnonClient }
+
 export function createAdminClient() {
   if (!process.env.NEXT_SERVICE_ROLE_SUPABASE_KEY) {
     throw new Error('NEXT_SERVICE_ROLE_SUPABASE_KEY is not set.')
   }
   // This client is privileged and should only be used on the server.
-  return createAdminBrowserClient(
+  return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_SERVICE_ROLE_SUPABASE_KEY!,
     {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -26,8 +26,53 @@ export default function HomePage() {
   const [currentPromptIndex, setCurrentPromptIndex] = useState(-1)
   const [selectedTools, setSelectedTools] = useState<Record<number, string>>({})
 
+  const handleCreateAutomation = useCallback(
+    async (promptToCreate: string, toolsToUse: Record<number, string>) => {
+      if (!promptToCreate) return
+
+      setPageState('creating')
+      try {
+        const response = await fetch('/api/automations/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userInput: promptToCreate, selectedTools: toolsToUse }),
+        })
+
+        if (response.status === 401) {
+          localStorage.setItem(
+            'automation_journey',
+            JSON.stringify({
+              userInput: promptToCreate,
+              selectedTools: toolsToUse,
+              action: 'create',
+            })
+          )
+          router.push('/login?reason=create_automation')
+          return
+        }
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create automation')
+        }
+
+        toast.success('Automation created successfully!')
+        router.push(`/automations/${data.automationId}`)
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
+        setPageState('reviewing')
+      }
+    },
+    [router]
+  )
+
   const handleValidate = useCallback(
-    async (promptToValidate: string) => {
+    async (
+      promptToValidate: string,
+      autoCreateOnSuccess = false,
+      preSelectedTools: Record<number, string> | undefined = undefined
+    ) => {
       if (!promptToValidate.trim()) {
         toast.error('Please enter a workflow description.')
         return
@@ -45,26 +90,52 @@ export default function HomePage() {
         }
         const data = await response.json()
         setValidationResult(data.validation)
-        // Set refined prompt only on initial validation
-        if (pageState === 'idle') {
-          setRefinedPrompt(promptToValidate)
+        setRefinedPrompt(promptToValidate)
+
+        let toolsToUse: Record<number, string>
+        if (preSelectedTools) {
+          setSelectedTools(preSelectedTools)
+          toolsToUse = preSelectedTools
+        } else {
+          const defaultTools: Record<number, string> = {}
+          data.validation.steps.forEach((step: WorkflowStep) => {
+            if (step.default_tool) {
+              defaultTools[step.step_number] = step.default_tool
+            }
+          })
+          setSelectedTools(defaultTools)
+          toolsToUse = defaultTools
         }
-        // Initialize selectedTools based on default_tool from validation
-        const defaultTools: Record<number, string> = {}
-        data.validation.steps.forEach((step: WorkflowStep) => {
-          if (step.default_tool) {
-            defaultTools[step.step_number] = step.default_tool
-          }
-        })
-        setSelectedTools(defaultTools)
+
         setPageState('reviewing')
+
+        if (autoCreateOnSuccess) {
+          handleCreateAutomation(promptToValidate, toolsToUse)
+        }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
         setPageState('idle')
       }
     },
-    [pageState]
+    [handleCreateAutomation]
   )
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const userInput = params.get('userInput')
+    const toolsParam = params.get('selectedTools')
+    const action = params.get('action')
+
+    if (action === 'create' && userInput) {
+      const selectedTools = toolsParam ? JSON.parse(toolsParam) : undefined
+      handleValidate(userInput, true, selectedTools)
+
+      // Clean up URL params to avoid re-triggering on refresh
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // IMPORTANT: Run only on initial mount
 
   const handleInspireMe = useCallback(() => {
     const nextIndex = (currentPromptIndex + 1) % inspirationalPrompts.length
@@ -81,29 +152,6 @@ export default function HomePage() {
     setSelectedTools(prev => ({ ...prev, [stepNumber]: tool }))
   }
 
-  const handleCreateAutomation = useCallback(async () => {
-    setPageState('creating')
-    try {
-      const response = await fetch('/api/automations/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userInput: refinedPrompt, selectedTools }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create automation')
-      }
-
-      toast.success('Automation created successfully!')
-      router.push(`/automations/${data.automationId}`)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
-      setPageState('reviewing')
-    }
-  }, [refinedPrompt, router, selectedTools])
-
   const isLoading = pageState === 'validating' || pageState === 'creating'
 
   return (
@@ -116,7 +164,7 @@ export default function HomePage() {
             setPrompt={setPrompt}
             onGenerate={() => handleValidate(prompt)}
             loading={isLoading}
-            buttonText="Generate My Automation"
+            buttonText="Analyze My Automation"
             onInspireMe={handleInspireMe}
           />
         )}
@@ -180,7 +228,7 @@ export default function HomePage() {
             />
 
             <Button
-              onClick={handleCreateAutomation}
+              onClick={() => handleCreateAutomation(refinedPrompt, selectedTools)}
               className="w-full text-lg font-semibold"
               size="lg"
               disabled={isLoading}

@@ -44,10 +44,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setLoading(true)
+
+      const journey = localStorage.getItem('automation_journey')
+      const redirectTo = journey
+        ? `${window.location.origin}/auth/callback?next=/auth/continue`
+        : `${window.location.origin}/auth/callback`
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

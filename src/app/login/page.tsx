@@ -1,57 +1,58 @@
-"use client";
+'use client'
 
-import { Suspense } from "react";
-import { useAuth } from "@/lib/auth/context";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
-import Link from "next/link";
+import { Suspense } from 'react'
+import { useAuth } from '@/lib/auth/context'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect } from 'react'
+import Link from 'next/link'
 
 function LoginContent() {
-  const { signInWithGoogle, user, loading } = useAuth();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectedFrom = searchParams.get("redirectedFrom");
+  const { signInWithGoogle, user, loading } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectedFrom = searchParams.get('redirectedFrom')
+  const reason = searchParams.get('reason')
 
   useEffect(() => {
     if (user && !loading) {
-      router.push(redirectedFrom || "/dashboard");
+      router.push(redirectedFrom || '/dashboard')
     }
-  }, [user, loading, router, redirectedFrom]);
+  }, [user, loading, router, redirectedFrom])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
       </div>
-    );
+    )
   }
 
   if (user) {
-    return null; // Will redirect
+    return null // Will redirect
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="bg-background flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your account to continue</CardDescription>
+          {reason === 'create_automation' ? (
+            <>
+              <CardTitle className="text-2xl">One Last Step</CardTitle>
+              <CardDescription>
+                Sign up or log in to finish creating your automation.
+              </CardDescription>
+            </>
+          ) : (
+            <>
+              <CardTitle className="text-2xl">Welcome Back</CardTitle>
+              <CardDescription>Sign in to your account to continue</CardDescription>
+            </>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button
-            onClick={signInWithGoogle}
-            disabled={loading}
-            className="w-full"
-            size="lg"
-          >
+          <Button onClick={signInWithGoogle} disabled={loading} className="w-full" size="lg">
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -70,36 +71,33 @@ function LoginContent() {
                 fill="#EA4335"
               />
             </svg>
-            {loading ? "Signing in..." : "Continue with Google"}
+            {loading ? 'Signing in...' : 'Continue with Google'}
           </Button>
 
-          <div className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
+          <div className="text-muted-foreground text-center text-sm">
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="text-primary hover:underline">
               Sign up
             </Link>
           </div>
 
           <div className="text-center">
-            <Link
-              href="/"
-              className="text-sm text-muted-foreground hover:underline"
-            >
+            <Link href="/" className="text-muted-foreground text-sm hover:underline">
               ← Back to home
             </Link>
           </div>
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
 
 function LoginFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
     </div>
-  );
+  )
 }
 
 export default function LoginPage() {
@@ -107,5 +105,5 @@ export default function LoginPage() {
     <Suspense fallback={<LoginFallback />}>
       <LoginContent />
     </Suspense>
-  );
+  )
 }
