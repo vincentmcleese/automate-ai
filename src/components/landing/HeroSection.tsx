@@ -25,19 +25,19 @@ export function HeroSection({
   onInspireMe,
 }: HeroSectionProps) {
   return (
-    <div className="relative isolate py-16 sm:py-32">
+    <div className="relative isolate py-12 sm:py-20 lg:py-32">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="mx-auto max-w-3xl text-center"
       >
-        <div className="mb-8">
+        <div className="mb-8 sm:mb-12">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: 0.05, type: 'spring', stiffness: 80 }}
-            className="flex items-center justify-center gap-4"
+            className="flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-4"
           >
             <Image
               src="/speedyghost.png"
@@ -51,12 +51,15 @@ export function HeroSection({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-foreground text-4xl font-extrabold tracking-tight sm:text-6xl"
+              className="text-foreground text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl"
             >
-              Prompt Automations
+              Prompt{' '}
+              <span className="from-primary bg-gradient-to-r to-teal-400 bg-clip-text text-transparent">
+                Automations
+              </span>
             </motion.h1>
           </motion.div>
-          <div className="mt-8">
+          <div className="mt-8 sm:mt-12">
             <ProcessSteps />
           </div>
         </div>

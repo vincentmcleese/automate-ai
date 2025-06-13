@@ -84,6 +84,43 @@ export class OpenRouterClient {
   }
 
   /**
+   * A private, robust method to parse JSON from a raw string,
+   * handling cases where the JSON is embedded in markdown.
+   */
+  private _safeParseJson<T>(rawContent: string): T {
+    try {
+      // Regex to find a JSON object within ```json ... ``` or ``` ... ```
+      const jsonRegex = /```(json)?\s*([\s\S]*?)\s*```/
+      const match = rawContent.match(jsonRegex)
+
+      let jsonString = rawContent.trim()
+
+      if (match && match[2]) {
+        // If a markdown code block is found, use its content
+        jsonString = match[2]
+      } else {
+        // Fallback for strings that might just be the JSON object itself
+        const firstBrace = jsonString.indexOf('{')
+        const lastBrace = jsonString.lastIndexOf('}')
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          jsonString = jsonString.substring(firstBrace, lastBrace + 1)
+        }
+      }
+
+      // Remove trailing commas from objects and arrays
+      jsonString = jsonString.replace(/,\s*([}\]])/g, '$1')
+
+      return JSON.parse(jsonString) as T
+    } catch (error) {
+      console.error('Failed to parse generated JSON. Raw content:', rawContent)
+      if (error instanceof Error) {
+        throw new Error(`The AI returned invalid JSON: ${error.message}`)
+      }
+      throw new Error('The AI returned an unrecoverable JSON format.')
+    }
+  }
+
+  /**
    * Public method for validating a workflow description.
    */
   public async validateWorkflow(
@@ -93,14 +130,7 @@ export class OpenRouterClient {
     const model = 'anthropic/claude-3.5-sonnet'
     const fullPrompt = `${systemPrompt}\n\nWorkflow Description:\n"""${workflowDescription}"""`
     const jsonContent = await this.callApi(fullPrompt, model)
-
-    try {
-      const parsed: WorkflowValidationResult = JSON.parse(jsonContent)
-      return parsed
-    } catch {
-      console.error('Failed to parse workflow validation JSON. Raw content:', jsonContent)
-      throw new Error('The AI returned an invalid JSON format for workflow validation.')
-    }
+    return this._safeParseJson<WorkflowValidationResult>(jsonContent)
   }
 
   /**
@@ -108,51 +138,8 @@ export class OpenRouterClient {
    * This will be used for both metadata and the final workflow JSON.
    */
   public async generateJson(prompt: string): Promise<unknown> {
-    // Using a smaller, faster model for generation tasks.
-    const model = 'mistralai/mistral-7b-instruct:free'
-    const rawContent = await this.callApi(prompt, model)
-    try {
-      // Find the first '{' and the last '}' to isolate the JSON object.
-      // This is more robust against conversational text or variations in markdown fences.
-      const jsonStart = rawContent.indexOf('{')
-      const jsonEnd = rawContent.lastIndexOf('}')
-
-      if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
-        throw new Error('Could not find a valid JSON object in the AI response.')
-      }
-
-      let jsonString = rawContent.substring(jsonStart, jsonEnd + 1)
-
-      // Clean common smart quotes
-      jsonString = jsonString.replace(/”|“/g, '"')
-
-      // Remove invalid comment-like lines (e.g., "... // some text")
-      // These are hallucinations from the model and break JSON parsing.
-      jsonString = jsonString.replace(/^\s*\.\.\..*$/gm, '')
-
-      // Escape unescaped double quotes inside n8n expressions {{...}}
-      jsonString = jsonString.replace(/\{\{([\s\S]+?)\}\}/g, (match, innerContent) => {
-        const fixedInnerContent = innerContent.replace(/"/g, '\\"')
-        return `{{${fixedInnerContent}}}`
-      })
-
-      const parsedJson = JSON.parse(jsonString)
-
-      // Final, most important step: Remove the connections array.
-      // n8n will recalculate them on import, which is more reliable
-      // than trying to get the AI to generate them perfectly.
-      if (typeof parsedJson === 'object' && parsedJson !== null && 'connections' in parsedJson) {
-        delete (parsedJson as { connections: unknown }).connections
-      }
-
-      return parsedJson
-    } catch (error) {
-      console.error('Failed to parse generated JSON. Raw content:', rawContent)
-      if (error instanceof SyntaxError) {
-        throw new Error(`The AI returned invalid JSON: ${error.message}`)
-      }
-      throw new Error('The AI returned an invalid or unrecoverable JSON format during generation.')
-    }
+    const rawContent = await this.callApi(prompt, 'mistralai/mistral-7b-instruct:free')
+    return this._safeParseJson<unknown>(rawContent)
   }
 
   public async complete(
@@ -206,12 +193,7 @@ export class OpenRouterClient {
     )}`
     const model = 'openai/gpt-4o-mini'
     const jsonContent = await this.callApi(userInput, model)
-    try {
-      return JSON.parse(jsonContent)
-    } catch (error) {
-      console.error('Failed to parse generation JSON:', error)
-      throw new Error('The AI returned an invalid JSON format for generation.')
-    }
+    return this._safeParseJson<unknown>(jsonContent)
   }
 
   public async getAvailableModels(): Promise<OpenRouterModel[]> {

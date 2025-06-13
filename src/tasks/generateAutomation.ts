@@ -82,7 +82,48 @@ async function getToolIds(supabase: SupabaseClient, toolNames: string[]): Promis
   return (data as ToolIdRecord[]) || []
 }
 
-export async function triggerAutomationGeneration(
+/**
+ * Generates the initial metadata for an automation and saves it.
+ * This part is synchronous.
+ */
+export async function generateInitialAutomation(
+  automationId: string,
+  userInput: string,
+  selectedTools: Record<number, string>
+) {
+  const supabase = await createClient()
+  const uniqueToolNames = Array.from(new Set(Object.values(selectedTools)))
+
+  const metadataPromptInfo = await getSystemPrompt(supabase, 'metadata_generation')
+  const metadata = await generateMetadata(supabase, userInput, uniqueToolNames, metadataPromptInfo)
+
+  const { title, description, tags, complexity, estimated_time_hours } = metadata
+  const { error: updateError } = await supabase
+    .from('automations')
+    .update({
+      title,
+      description,
+      tags,
+      complexity,
+      estimated_time_hours,
+      status: 'generating_workflow',
+      prompt_id: metadataPromptInfo.id,
+      prompt_version: metadataPromptInfo.version,
+    })
+    .eq('id', automationId)
+
+  if (updateError) {
+    throw new Error(`Failed to update automation with metadata: ${updateError.message}`)
+  }
+
+  // Fire-and-forget the workflow generation
+  generateWorkflowInBackground(automationId, userInput, selectedTools).catch(console.error)
+}
+
+/**
+ * Generates the workflow JSON in the background.
+ */
+export async function generateWorkflowInBackground(
   automationId: string,
   userInput: string,
   selectedTools: Record<number, string>
@@ -91,80 +132,36 @@ export async function triggerAutomationGeneration(
   const uniqueToolNames = Array.from(new Set(Object.values(selectedTools)))
 
   try {
-    // Fetch prompts first to get their IDs and versions
-    const metadataPromptInfo = await getSystemPrompt(supabase, 'metadata_generation')
     const workflowPromptInfo = await getSystemPrompt(supabase, 'json_generation')
-
-    // Run AI generation tasks in parallel
-    const results = await Promise.allSettled([
-      generateMetadata(supabase, userInput, uniqueToolNames, metadataPromptInfo),
+    const [generated_json, toolRecords] = await Promise.all([
       generateWorkflow(supabase, userInput, uniqueToolNames, workflowPromptInfo),
       getToolIds(supabase, uniqueToolNames),
     ])
 
-    // All promises fulfilled
-    const resultsData = results.map(r => (r.status === 'fulfilled' ? r.value : null))
-
-    const [metadata, generated_json, toolRecords] = resultsData as [
-      AutomationMetadata | null,
-      object | null,
-      ToolIdRecord[] | null,
-    ]
-
-    if (!metadata || !generated_json || !toolRecords) {
-      const errorReasons = results
-        .filter(r => r.status === 'rejected')
-        .map(r => (r as PromiseRejectedResult).reason.message)
-      throw new Error(`Generation failed. Reasons: ${errorReasons.join(', ')}`)
-    }
-
-    const { title, description, tags, complexity, estimated_time_hours } = metadata
-    // Update the automation with the generated data
     const { error: updateError } = await supabase
       .from('automations')
       .update({
-        title,
-        description,
-        tags,
-        generated_json: generated_json,
+        generated_json: generated_json as object,
         status: 'completed',
-        complexity,
-        estimated_time_hours,
-        // Now including the prompt info
-        prompt_id: workflowPromptInfo.id,
-        prompt_version: workflowPromptInfo.version,
       })
       .eq('id', automationId)
 
-    if (updateError) {
-      throw new Error(`Failed to update automation record: ${updateError.message}`)
-    }
+    if (updateError) throw updateError
 
-    // Link the tools to the automation
     if (toolRecords && toolRecords.length > 0) {
       const toolLinks = toolRecords.map(tool => ({
         automation_id: automationId,
         tool_id: tool.id,
       }))
-      const { error: toolLinkError } = await supabase.from('automation_tools').insert(toolLinks)
-      if (toolLinkError) {
-        // This is not a critical failure, so we'll just log it
-        console.error('Failed to link tools to automation:', toolLinkError.message)
-      }
+      await supabase.from('automation_tools').insert(toolLinks)
     }
 
-    console.log(`Automation ${automationId} completed successfully.`)
-  } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'An unknown error occurred during generation.'
-    console.error(`Error processing automation ${automationId}:`, error)
-    // Update the automation to failed status
+    console.log(`Workflow for automation ${automationId} completed successfully.`)
+  } catch (error) {
+    console.error(`Error generating workflow for automation ${automationId}:`, error)
     await supabase
       .from('automations')
-      .update({
-        status: 'failed',
-        error_message: errorMessage,
-      })
+      .update({ status: 'failed', error_message: 'Workflow generation failed.' })
       .eq('id', automationId)
   }
 }

@@ -6,15 +6,15 @@ import { PenSquare, BrainCircuit, FileJson, ChevronRight } from 'lucide-react'
 const steps = [
   {
     icon: <PenSquare className="h-6 w-6" />,
-    text: 'Describe your workflow',
+    text: 'Describe Workflow',
   },
   {
     icon: <BrainCircuit className="h-6 w-6" />,
-    text: 'Our AI analyzes it',
+    text: 'AI Analyzes',
   },
   {
     icon: <FileJson className="h-6 w-6" />,
-    text: 'Production-ready JSON & guide',
+    text: 'Get JSON & Guide',
   },
 ]
 
@@ -47,13 +47,20 @@ export function ProcessSteps() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="text-muted-foreground flex flex-col items-center justify-center gap-4 text-sm sm:flex-row sm:gap-6"
+      className="text-muted-foreground relative flex flex-col items-start justify-center gap-8 text-sm sm:flex-row sm:items-center sm:gap-6"
     >
+      <div className="border-border absolute top-0 left-5 h-full w-px -translate-x-px border-l border-dashed sm:hidden" />
       {steps.map((step, index) => (
-        <motion.div key={index} className="flex items-center gap-6" variants={itemVariants}>
-          <div className="flex items-center gap-2">
-            {step.icon}
-            <span>{step.text}</span>
+        <motion.div
+          key={index}
+          className="relative z-10 flex w-full items-center justify-start gap-6 sm:w-auto sm:justify-center"
+          variants={itemVariants}
+        >
+          <div className="relative flex items-center gap-3 pl-10 sm:pl-0">
+            <div className="bg-background text-primary absolute left-0 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border shadow-sm sm:static">
+              {step.icon}
+            </div>
+            <span className="text-left">{step.text}</span>
           </div>
           {index < steps.length - 1 && (
             <ChevronRight className="text-primary hidden h-6 w-6 sm:block" />

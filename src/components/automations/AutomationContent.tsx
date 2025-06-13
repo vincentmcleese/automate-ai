@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Calendar, Download, Info, Share2, WorkflowIcon } from 'lucide-react'
+import { ArrowLeft, Calendar, Download, Info, Share2, WorkflowIcon, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { Automation, Tool } from '@/types/admin'
 import { WorkflowDisplay } from './WorkflowDisplay'
@@ -10,10 +10,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FormattedDate } from './FormattedDate'
 import { LeaderboardCreatorCard } from './LeaderboardCreatorCard'
 import Image from 'next/image'
+import { toast } from 'sonner'
 
 export function AutomationContent({ automationId }: { automationId: string }) {
   const [automation, setAutomation] = useState<Automation | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Polling logic
+  useEffect(() => {
+    if (automation && (automation.status === 'completed' || automation.status === 'failed')) {
+      return
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/automations/${automationId}/status`)
+        const data = await response.json()
+
+        if (data.status === 'completed' || data.status === 'failed') {
+          // Fetch the full details one last time and stop polling
+          const finalResponse = await fetch(`/api/automations/${automationId}/details`)
+          const finalData = await finalResponse.json()
+          setAutomation(finalData)
+          clearInterval(interval)
+        }
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
+    }, 5000) // Poll every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [automation, automationId])
 
   useEffect(() => {
     const fetchAutomationDetails = async () => {
@@ -26,6 +53,7 @@ export function AutomationContent({ automationId }: { automationId: string }) {
         const data: Automation = await response.json()
         setAutomation(data)
       } catch (error) {
+        toast.error('Failed to load automation. It may have been deleted or an error occurred.')
         console.error(error)
       } finally {
         setLoading(false)
@@ -179,8 +207,25 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                   <WorkflowDisplay json={automation.generated_json} />
                 ) : (
                   <Card>
-                    <CardContent className="p-6 text-center text-gray-600">
-                      This automation is still being generated or has failed.
+                    <CardContent className="flex flex-col items-center justify-center space-y-4 p-6 text-center text-gray-600">
+                      {automation.status === 'failed' ? (
+                        <div className="w-full text-left">
+                          <p className="font-semibold text-red-500">Automation Failed</p>
+                          {automation.error_message && (
+                            <pre className="text-muted-foreground mt-2 rounded-md bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap">
+                              {automation.error_message}
+                            </pre>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-6 w-6 animate-spin" />
+                          <span>
+                            This automation is still being generated. The page will update
+                            automatically.
+                          </span>
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 )}

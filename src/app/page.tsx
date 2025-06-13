@@ -76,12 +76,14 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userInput: refinedPrompt, selectedTools: {} }),
       })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create automation')
-      }
+
       const data = await response.json()
-      toast.success('Automation creation started!')
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create automation')
+      }
+
+      toast.success('Automation created successfully!')
       router.push(`/automations/${data.automationId}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')

@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
-// We will create this task runner shortly
-import { triggerAutomationGeneration } from '@/tasks/generateAutomation'
+import { generateInitialAutomation } from '@/tasks/generateAutomation'
 
 const createSchema = z.object({
   userInput: z.string().min(10, 'User input is too short'),
@@ -56,10 +55,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create automation.' }, { status: 500 })
   }
 
-  // 2. Trigger the background task.
-  // We don't await this so the response is sent back to the client immediately.
-  triggerAutomationGeneration(newAutomation.id, userInput, selectedTools)
+  try {
+    // 2. Synchronously generate metadata and trigger background workflow generation.
+    await generateInitialAutomation(newAutomation.id, userInput, selectedTools)
 
-  // 3. Immediately return the new automation ID to the client
-  return NextResponse.json({ automationId: newAutomation.id }, { status: 202 })
+    // 3. Immediately return the new automation ID.
+    return NextResponse.json({ automationId: newAutomation.id }, { status: 200 })
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'An unknown error occurred during generation.'
+    console.error(`Error processing automation ${newAutomation.id}:`, error)
+
+    // Update the automation to failed status
+    await supabase
+      .from('automations')
+      .update({
+        status: 'failed',
+        error_message: errorMessage,
+      })
+      .eq('id', newAutomation.id)
+
+    // 4. If there's an error, return a 500 status with the error message.
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
+  }
 }
