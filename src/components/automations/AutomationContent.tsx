@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Calendar, Download, Info, Share2, Copy, FileText } from 'lucide-react'
+import { ArrowLeft, Calendar, Download, Info, Share2, Copy } from 'lucide-react'
 import Link from 'next/link'
 import { Automation, Tool } from '@/types/admin'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,38 +16,51 @@ export function AutomationContent({ automationId }: { automationId: string }) {
   const [automation, setAutomation] = useState<Automation | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const copyJson = () => {
-    if (!automation?.generated_json) return
-    let jsonString = ''
+  const getCleanJson = () => {
+    if (!automation?.generated_json) return ''
+    let rawContent = ''
     if (typeof automation.generated_json === 'string') {
-      jsonString = automation.generated_json
+      rawContent = automation.generated_json
     } else {
-      jsonString = JSON.stringify(automation.generated_json, null, 2)
+      return JSON.stringify(automation.generated_json, null, 2)
     }
-    // Attempt to format the string if it's a stringified JSON
+
     try {
+      const jsonRegex = /```(json)?\s*([\s\S]*?)\s*```/
+      const match = rawContent.match(jsonRegex)
+
+      let jsonString = rawContent.trim()
+      if (match && match[2]) {
+        jsonString = match[2]
+      } else {
+        const firstBrace = jsonString.indexOf('{')
+        const lastBrace = jsonString.lastIndexOf('}')
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          jsonString = jsonString.substring(firstBrace, lastBrace + 1)
+        }
+      }
       const parsed = JSON.parse(jsonString)
-      jsonString = JSON.stringify(parsed, null, 2)
+      return JSON.stringify(parsed, null, 2)
     } catch {
-      // Not a valid JSON string, copy as is
+      return rawContent // Fallback to raw content if parsing fails
     }
+  }
+
+  const copyJson = () => {
+    const jsonString = getCleanJson()
+    if (!jsonString) return
     navigator.clipboard.writeText(jsonString)
     toast.success('Content copied to clipboard!')
   }
 
   const downloadJson = () => {
-    if (!automation?.generated_json) return
-    let content = ''
-    if (typeof automation.generated_json === 'string') {
-      content = automation.generated_json
-    } else {
-      content = JSON.stringify(automation.generated_json, null, 2)
-    }
+    const content = getCleanJson()
+    if (!content) return
     const blob = new Blob([content], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `automation-${automation.id}.json`
+    a.download = `automation-${automation?.id}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -131,12 +144,6 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Download JSON
-                </Button>
-                <Button variant="outline" className="text-sm" asChild>
-                  <Link href={`/automations/${automation.id}/report`}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    View Report
-                  </Link>
                 </Button>
                 <Button asChild variant="outline" className="text-sm">
                   <Link
@@ -235,11 +242,7 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                 {automation.status === 'completed' && automation.generated_json ? (
                   <div className="space-y-4">
                     <div className="max-h-[500px] overflow-auto rounded-md bg-gray-900 p-4 font-mono text-sm text-green-400">
-                      <pre>
-                        {typeof automation.generated_json === 'string'
-                          ? automation.generated_json
-                          : JSON.stringify(automation.generated_json, null, 2)}
-                      </pre>
+                      <pre>{getCleanJson()}</pre>
                     </div>
                     <Button onClick={copyJson} variant="outline" className="w-full sm:w-auto">
                       <Copy className="mr-2 h-4 w-4" />

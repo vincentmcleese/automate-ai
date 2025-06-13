@@ -49,7 +49,7 @@ export class OpenRouterClient {
    * A generic, private method to make a call to the OpenRouter chat completions API.
    * It enforces a JSON response format.
    */
-  private async callApi(prompt: string, model: string): Promise<string> {
+  private async callApi(prompt: string, model: string, max_tokens?: number): Promise<string> {
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -63,6 +63,7 @@ export class OpenRouterClient {
           model,
           messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' },
+          max_tokens: max_tokens || 2048, // Default to 2048 if not provided
         }),
       })
 
@@ -143,8 +144,8 @@ export class OpenRouterClient {
    * Public method for any generation task that requires a text output from the AI.
    * This is now used for the final workflow "JSON" which is treated as a raw string.
    */
-  public async generateText(prompt: string, model: string): Promise<string> {
-    const rawContent = await this.callApi(prompt, model)
+  public async generateText(prompt: string, model: string, max_tokens?: number): Promise<string> {
+    const rawContent = await this.callApi(prompt, model, max_tokens)
     if (!rawContent) {
       throw new Error('AI returned an empty response.')
     }
@@ -154,8 +155,8 @@ export class OpenRouterClient {
   /**
    * Public method for generating structured metadata JSON.
    */
-  public async generateJson(prompt: string): Promise<unknown> {
-    const rawContent = await this.callApi(prompt, 'mistralai/mistral-7b-instruct:free')
+  public async generateJson(prompt: string, model: string, max_tokens?: number): Promise<unknown> {
+    const rawContent = await this.callApi(prompt, model, max_tokens)
     return this._safeParseJson<unknown>(rawContent)
   }
 

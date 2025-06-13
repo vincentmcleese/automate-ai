@@ -10,29 +10,53 @@ type AutomationMetadata = {
   estimated_time_hours: number
 }
 
+type TrainingData = {
+  title: string
+  content: string
+}
+
 type SystemPromptInfo = {
   content: string
   id: string
   version: number
+  trainingData: TrainingData[]
+  modelId: string | null
 }
 
-// Helper to fetch the active system prompt from the database
+// Helper to fetch the active system prompt and its training data from the database
 async function getSystemPrompt(
   supabase: SupabaseClient,
   promptName: string
 ): Promise<SystemPromptInfo> {
   const { data: prompt, error } = await supabase
     .from('system_prompts')
-    .select('id, prompt_content, version')
+    .select(
+      `
+      id, 
+      prompt_content, 
+      version,
+      model_id,
+      system_prompt_training_data (
+        title,
+        content
+      )
+    `
+    )
     .eq('name', promptName)
     .order('version', { ascending: false })
     .limit(1)
     .single()
 
   if (error || !prompt) {
-    throw new Error(`Could not find system prompt: ${promptName}`)
+    throw new Error(`Could not find system prompt: ${promptName}. Error: ${error?.message}`)
   }
-  return { content: prompt.prompt_content, id: prompt.id, version: prompt.version }
+  return {
+    content: prompt.prompt_content,
+    id: prompt.id,
+    version: prompt.version,
+    trainingData: prompt.system_prompt_training_data as TrainingData[],
+    modelId: prompt.model_id,
+  }
 }
 
 // Generates metadata by calling the 'metadata_generation' prompt
@@ -43,11 +67,21 @@ async function generateMetadata(
   promptInfo: SystemPromptInfo
 ): Promise<AutomationMetadata> {
   const openRouterClient = getOpenRouterClient()
-  const prompt = promptInfo.content
+
+  let prompt = promptInfo.content
     .replace('{{user_input}}', userInput)
     .replace('{{tools}}', tools.join(', ') || 'None')
 
-  return (await openRouterClient.generateJson(prompt)) as AutomationMetadata
+  // Add training data to the prompt if it exists
+  if (promptInfo.trainingData && promptInfo.trainingData.length > 0) {
+    const trainingSection = promptInfo.trainingData
+      .map(data => `## ${data.title}\n\n${data.content}`)
+      .join('\n\n')
+    prompt += `\n\n${trainingSection}`
+  }
+
+  const model = promptInfo.modelId || 'mistralai/mistral-7b-instruct:free'
+  return (await openRouterClient.generateJson(prompt, model)) as AutomationMetadata
 }
 
 // Generates the workflow by calling the 'json_generation' prompt
@@ -59,9 +93,20 @@ async function generateWorkflow(
 ): Promise<string> {
   const openRouterClient = getOpenRouterClient()
 
-  const finalPrompt = `${promptInfo.content}\n\nUser Input: ${userInput}\nSelected Tools: ${tools.join(', ') || 'None'}`
+  let finalPrompt = promptInfo.content
 
-  return openRouterClient.generateText(finalPrompt, 'openai/gpt-4o-mini')
+  // Add training data to the prompt if it exists
+  if (promptInfo.trainingData && promptInfo.trainingData.length > 0) {
+    const trainingSection = promptInfo.trainingData
+      .map(data => `## ${data.title}\n\n${data.content}`)
+      .join('\n\n')
+    finalPrompt += `\n\n${trainingSection}`
+  }
+
+  finalPrompt += `\n\nUser Input: ${userInput}\nSelected Tools: ${tools.join(', ') || 'None'}`
+
+  const model = promptInfo.modelId || 'openai/gpt-4o-mini'
+  return openRouterClient.generateText(finalPrompt, model, 8192)
 }
 
 type ToolIdRecord = {
