@@ -18,7 +18,12 @@ export function Header() {
               className="h-8 w-8"
               priority
             />
-            <span className="text-xl font-bold">Automate</span>
+            <span className="text-xl font-bold">
+              Ghost{' '}
+              <span className="from-primary bg-gradient-to-r to-teal-400 bg-clip-text text-transparent">
+                Flows
+              </span>
+            </span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             <Link

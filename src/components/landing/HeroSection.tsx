@@ -53,9 +53,9 @@ export function HeroSection({
               transition={{ duration: 0.5, delay: 0.1 }}
               className="text-foreground text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl"
             >
-              Prompt{' '}
+              Ghost{' '}
               <span className="from-primary bg-gradient-to-r to-teal-400 bg-clip-text text-transparent">
-                Automations
+                Flows
               </span>
             </motion.h1>
           </motion.div>
