@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 🎨 STYLE & DESIGN REQUIREMENTS
 Design System
-Framework: Next.js 14 with App Router
+
 UI Components: shadcn/ui
 Styling: Tailwind CSS
 Color Palette:
@@ -16,14 +16,16 @@ Text Primary: #000000
 Text Secondary: #6b7280
 Border: #e5e7eb
 Component Structure
-Header with logo, navigation, and user menu
-Card-based layout for content sections
-Modern button styles (primary/secondary variants)
-Form inputs with focus states
-Loading states and animations
-Toast notifications
-Modal dialogs for authentication
-Responsive Design
+Design Style
+•A perfect balance between elegant minimalism and functional design.
+•Soft, refreshing gradient colors that seamlessly integrate with the brand palette.
+•Well-proportioned white space for a clean layout.
+•Light and immersive user experience.
+•Clear information hierarchy using subtle shadows and modular card layouts.
+•Natural focus on core functionalities.
+•Refined rounded corners.
+•Delicate micro-interactions.
+•Comfortable visual proportions.
 Mobile-first approach
 Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
 Collapsible navigation on mobile

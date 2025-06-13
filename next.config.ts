@@ -26,6 +26,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
         hostname: 'avatar.vercel.sh',
       },
       // Add specific pattern for your Supabase project

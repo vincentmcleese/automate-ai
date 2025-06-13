@@ -29,7 +29,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-          <div className="bg-background min-h-screen">
+          <div className="min-h-screen">
             <Header />
             <main>{children}</main>
           </div>

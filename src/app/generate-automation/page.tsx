@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import Image from 'next/image'
 
 import { toast } from 'sonner'
 import { WorkflowValidationResult } from '@/types/admin'
 import { AnimatedLoading } from '@/components/generate/AnimatedLoading'
 import { ValidationResultsDisplay } from '@/components/generate/ValidationResultsDisplay'
 
-import { ArrowRight, Wand2 } from 'lucide-react'
+import { CheckCircle, AlertTriangle, ChevronDown } from 'lucide-react'
 
 type PageState = 'idle' | 'validating' | 'reviewing' | 'creating'
 
@@ -74,12 +75,39 @@ function GenerateAutomationContent() {
     <div className="bg-background min-h-screen">
       <div className="container mx-auto max-w-4xl px-4 py-12">
         <header className="mb-12 text-center">
-          <h1 className="text-text-primary text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Create a New Automation
-          </h1>
-          <p className="text-text-secondary mt-4 text-xl">
-            Describe your workflow, and our AI will build it for you.
-          </p>
+          {pageState === 'reviewing' && validationResult ? (
+            <div className="flex flex-col items-center justify-center gap-4">
+              <div className="flex items-center justify-center gap-2">
+                {validationResult.is_valid ? (
+                  <CheckCircle className="text-brand-primary h-8 w-8" />
+                ) : (
+                  <AlertTriangle className="h-8 w-8 text-yellow-500" />
+                )}
+                <h1
+                  className={`text-4xl font-extrabold tracking-tight sm:text-5xl ${
+                    validationResult.is_valid ? 'text-brand-primary' : 'text-yellow-600'
+                  }`}
+                >
+                  {validationResult.is_valid ? 'Looks Good!' : 'Needs Improvement'}
+                </h1>
+              </div>
+              <div className="mt-2 flex flex-col items-center">
+                <ChevronDown className="text-muted-foreground h-7 w-7 animate-bounce" />
+                <span className="text-text-secondary mt-1 text-base">
+                  Scroll down to see the analysis and begin creation
+                </span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-text-primary text-4xl font-extrabold tracking-tight sm:text-5xl">
+                Create a New Automation
+              </h1>
+              <p className="text-text-secondary mt-4 text-xl">
+                Describe your workflow, and our AI will build it for you.
+              </p>
+            </>
+          )}
         </header>
 
         {pageState === 'idle' && (
@@ -99,7 +127,13 @@ function GenerateAutomationContent() {
               />
 
               <Button onClick={handleValidate} className="w-full">
-                <Wand2 className="mr-2 h-4 w-4" />
+                <Image
+                  src="/ghost_white_transparent.png"
+                  alt="Ghost Logo"
+                  width={20}
+                  height={20}
+                  className="mr-2 h-5 w-5"
+                />
                 Analyze & Plan Workflow
               </Button>
             </CardContent>
@@ -112,23 +146,17 @@ function GenerateAutomationContent() {
         {pageState === 'reviewing' && validationResult && (
           <div className="space-y-8">
             <ValidationResultsDisplay results={validationResult} />
-            <Card>
-              <CardHeader>
-                <CardTitle>2. Refine Your Prompt (Optional)</CardTitle>
-                <CardDescription>
-                  Based on the plan above, you can refine your prompt for a better result.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  rows={4}
-                  value={refinedPrompt}
-                  onChange={e => setRefinedPrompt(e.target.value)}
-                />
-              </CardContent>
-            </Card>
-            <Button onClick={handleCreateAutomation} className="w-full text-lg">
-              <ArrowRight className="mr-2 h-5 w-5" />
+            <Button
+              onClick={handleCreateAutomation}
+              className="flex w-full items-center justify-center text-lg"
+            >
+              <Image
+                src="/ghost_white_transparent.png"
+                alt="Ghost Logo"
+                width={28}
+                height={28}
+                className="mr-2 h-7 w-7"
+              />
               Yes, Generate this Automation!
             </Button>
           </div>

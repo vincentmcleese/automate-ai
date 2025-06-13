@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { User, Settings, LogOut, Shield } from 'lucide-react'
+import { Settings, LogOut, Shield } from 'lucide-react'
 import Link from 'next/link'
 
 const UserMenuContent = React.memo(function UserMenuContent() {
@@ -71,12 +71,6 @@ const UserMenuContent = React.memo(function UserMenuContent() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard" className="flex items-center">
-            <User className="mr-2 h-4 w-4" />
-            Dashboard
-          </Link>
-        </DropdownMenuItem>
         {isAdmin && (
           <DropdownMenuItem asChild>
             <Link href="/admin" className="flex items-center">

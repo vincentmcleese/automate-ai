@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { UserMenu } from '@/components/auth/user-menu'
 
 export function Header() {
@@ -9,15 +10,17 @@ export function Header() {
       <div className="container mx-auto flex h-14 items-center">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="text-xl font-bold">AutomateAI</span>
+            <Image
+              src="/greenghost.png"
+              alt="Automate Logo"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+              priority
+            />
+            <span className="text-xl font-bold">Automate</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
-            <Link
-              href="/dashboard"
-              className="hover:text-foreground/80 text-foreground/60 transition-colors"
-            >
-              Dashboard
-            </Link>
             <Link
               href="/automations"
               className="hover:text-foreground/80 text-foreground/60 transition-colors"
