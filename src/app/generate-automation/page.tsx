@@ -20,9 +20,16 @@ function GenerateAutomationContent() {
   const router = useRouter()
   const [pageState, setPageState] = useState<PageState>('idle')
   const [prompt, setPrompt] = useState('')
-  const [selectedTools] = useState<Record<string, string>>({})
+  const [selectedTools, setSelectedTools] = useState<Record<number, string>>({})
   const [validationResult, setValidationResult] = useState<WorkflowValidationResult | null>(null)
   const [refinedPrompt, setRefinedPrompt] = useState('')
+
+  const handleToolSelect = (stepNumber: number, tool: string) => {
+    setSelectedTools(prev => ({
+      ...prev,
+      [stepNumber]: tool,
+    }))
+  }
 
   const handleValidate = async () => {
     if (!prompt.trim()) {
@@ -145,7 +152,11 @@ function GenerateAutomationContent() {
 
         {pageState === 'reviewing' && validationResult && (
           <div className="space-y-8">
-            <ValidationResultsDisplay results={validationResult} />
+            <ValidationResultsDisplay
+              results={validationResult}
+              selectedTools={selectedTools}
+              onToolSelect={handleToolSelect}
+            />
             <Button
               onClick={handleCreateAutomation}
               className="flex w-full items-center justify-center text-lg"

@@ -3,14 +3,33 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, BarChart, AlertTriangle, Lightbulb } from 'lucide-react'
-import { WorkflowValidationResult } from '@/types/admin'
-import Image from 'next/image'
+import { WorkflowValidationResult, WorkflowStep } from '@/types/admin'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface ValidationResultsDisplayProps {
   results: WorkflowValidationResult
+  selectedTools: Record<number, string>
+  onToolSelect: (stepNumber: number, tool: string) => void
 }
 
-export function ValidationResultsDisplay({ results }: ValidationResultsDisplayProps) {
+export function ValidationResultsDisplay({
+  results,
+  selectedTools,
+  onToolSelect,
+}: ValidationResultsDisplayProps) {
+  const isChangeable = (step: WorkflowStep) => {
+    return (
+      step.tool_category &&
+      !['Code', 'HTTPRequest', 'Custom Integration'].includes(step.tool_category)
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
@@ -25,7 +44,9 @@ export function ValidationResultsDisplay({ results }: ValidationResultsDisplayPr
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${results.is_valid ? 'text-brand-primary' : 'text-yellow-600'}`}
+              className={`text-2xl font-bold ${
+                results.is_valid ? 'text-brand-primary' : 'text-yellow-600'
+              }`}
             >
               {results.is_valid ? 'Looks Good!' : 'Needs Improvement'}
             </div>
@@ -57,38 +78,31 @@ export function ValidationResultsDisplay({ results }: ValidationResultsDisplayPr
               <div className="bg-brand-primary flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-white">
                 {step.step_number}
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-text-primary font-semibold">{step.description}</p>
-                <Badge variant="outline" className="mt-1 font-normal">
-                  Tool: {step.default_tool || 'N/A'}
-                </Badge>
-
-                {step.available_tools && step.available_tools.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-text-secondary mb-2 text-xs font-medium">
-                      Recommended Tools:
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {step.available_tools.map(tool => (
-                        <div
-                          key={tool.name}
-                          className="flex items-center space-x-2 rounded-full border bg-gray-50 px-2 py-1"
-                        >
-                          {tool.logo_url && (
-                            <Image
-                              src={tool.logo_url}
-                              alt={`${tool.name} logo`}
-                              width={16}
-                              height={16}
-                              className="h-4 w-4"
-                            />
-                          )}
-                          <span className="text-xs text-gray-700">{tool.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="mt-2">
+                  {isChangeable(step) && step.available_tools ? (
+                    <Select
+                      onValueChange={value => onToolSelect(step.step_number, value)}
+                      value={selectedTools[step.step_number] || 'none'}
+                    >
+                      <SelectTrigger className="w-full max-w-xs">
+                        <SelectValue placeholder="Select a tool..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No tool required</SelectItem>
+                        {step.available_tools.map(tool => (
+                          <SelectItem key={tool.name} value={tool.name}>
+                            {tool.name}
+                          </SelectItem>
+                        ))}
+                        {/* Option to add a new tool can be added here later */}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="secondary">{step.default_tool || 'N/A'}</Badge>
+                  )}
+                </div>
               </div>
             </div>
           ))}

@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { WorkflowValidationResult } from '@/types/admin'
+import { WorkflowValidationResult, WorkflowStep } from '@/types/admin'
 import { AnimatedLoading } from '@/components/generate/AnimatedLoading'
 import { ValidationResultsDisplay } from '@/components/generate/ValidationResultsDisplay'
 import { KeyBenefitsSection } from '@/components/landing/KeyBenefitsSection'
@@ -24,6 +24,7 @@ export default function HomePage() {
   const [validationResult, setValidationResult] = useState<WorkflowValidationResult | null>(null)
   const [refinedPrompt, setRefinedPrompt] = useState('')
   const [currentPromptIndex, setCurrentPromptIndex] = useState(-1)
+  const [selectedTools, setSelectedTools] = useState<Record<number, string>>({})
 
   const handleValidate = useCallback(
     async (promptToValidate: string) => {
@@ -48,6 +49,14 @@ export default function HomePage() {
         if (pageState === 'idle') {
           setRefinedPrompt(promptToValidate)
         }
+        // Initialize selectedTools based on default_tool from validation
+        const defaultTools: Record<number, string> = {}
+        data.validation.steps.forEach((step: WorkflowStep) => {
+          if (step.default_tool) {
+            defaultTools[step.step_number] = step.default_tool
+          }
+        })
+        setSelectedTools(defaultTools)
         setPageState('reviewing')
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
@@ -68,13 +77,17 @@ export default function HomePage() {
     }
   }, [currentPromptIndex, pageState])
 
+  const handleToolSelect = (stepNumber: number, tool: string) => {
+    setSelectedTools(prev => ({ ...prev, [stepNumber]: tool }))
+  }
+
   const handleCreateAutomation = useCallback(async () => {
     setPageState('creating')
     try {
       const response = await fetch('/api/automations/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userInput: refinedPrompt, selectedTools: {} }),
+        body: JSON.stringify({ userInput: refinedPrompt, selectedTools }),
       })
 
       const data = await response.json()
@@ -89,7 +102,7 @@ export default function HomePage() {
       toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
       setPageState('reviewing')
     }
-  }, [refinedPrompt, router])
+  }, [refinedPrompt, router, selectedTools])
 
   const isLoading = pageState === 'validating' || pageState === 'creating'
 
@@ -160,7 +173,11 @@ export default function HomePage() {
               </span>
             </div>
 
-            <ValidationResultsDisplay results={validationResult} />
+            <ValidationResultsDisplay
+              results={validationResult}
+              selectedTools={selectedTools}
+              onToolSelect={handleToolSelect}
+            />
 
             <Button
               onClick={handleCreateAutomation}

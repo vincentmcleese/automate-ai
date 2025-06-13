@@ -10,6 +10,9 @@ const compat = new FlatCompat({
 })
 
 const eslintConfig = [
+  {
+    ignores: ['.next', 'dist', 'build', '.vercel', 'node_modules'],
+  },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
     rules: {
@@ -36,6 +39,12 @@ const eslintConfig = [
   },
   {
     files: ['tailwind.config.ts'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
+    files: ['jest.config.js', 'eslint.config.mjs'],
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
     },

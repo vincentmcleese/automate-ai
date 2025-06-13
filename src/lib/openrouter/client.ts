@@ -110,6 +110,12 @@ export class OpenRouterClient {
       // Remove trailing commas from objects and arrays
       jsonString = jsonString.replace(/,\s*([}\]])/g, '$1')
 
+      // Sanitize concatenated strings within n8n-style expressions
+      jsonString = jsonString.replace(/"\{\{([\s\S]+?)\}\}"\s*\+\s*"([^"]*)"/g, (match, p1, p2) => {
+        const sanitizedExpression = `{{${p1}${p2}}}`
+        return JSON.stringify(sanitizedExpression)
+      })
+
       return JSON.parse(jsonString) as T
     } catch (error) {
       console.error('Failed to parse generated JSON. Raw content:', rawContent)
@@ -134,8 +140,19 @@ export class OpenRouterClient {
   }
 
   /**
-   * Public method for any generation task that requires a JSON output.
-   * This will be used for both metadata and the final workflow JSON.
+   * Public method for any generation task that requires a text output from the AI.
+   * This is now used for the final workflow "JSON" which is treated as a raw string.
+   */
+  public async generateText(prompt: string, model: string): Promise<string> {
+    const rawContent = await this.callApi(prompt, model)
+    if (!rawContent) {
+      throw new Error('AI returned an empty response.')
+    }
+    return rawContent
+  }
+
+  /**
+   * Public method for generating structured metadata JSON.
    */
   public async generateJson(prompt: string): Promise<unknown> {
     const rawContent = await this.callApi(prompt, 'mistralai/mistral-7b-instruct:free')
@@ -192,8 +209,9 @@ export class OpenRouterClient {
       2
     )}`
     const model = 'openai/gpt-4o-mini'
-    const jsonContent = await this.callApi(userInput, model)
-    return this._safeParseJson<unknown>(jsonContent)
+    // Return raw text, not parsed JSON
+    const textContent = await this.generateText(userInput, model)
+    return textContent
   }
 
   public async getAvailableModels(): Promise<OpenRouterModel[]> {

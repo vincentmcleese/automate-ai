@@ -56,13 +56,12 @@ async function generateWorkflow(
   userInput: string,
   tools: string[],
   promptInfo: SystemPromptInfo
-): Promise<object> {
+): Promise<string> {
   const openRouterClient = getOpenRouterClient()
-  const prompt = promptInfo.content
-    .replace('{{workflow_description}}', userInput)
-    .replace('{{tools}}', tools.join(', ') || 'None')
 
-  return (await openRouterClient.generateJson(prompt)) as object
+  const finalPrompt = `${promptInfo.content}\n\nUser Input: ${userInput}\nSelected Tools: ${tools.join(', ') || 'None'}`
+
+  return openRouterClient.generateText(finalPrompt, 'openai/gpt-4o-mini')
 }
 
 type ToolIdRecord = {
@@ -107,8 +106,6 @@ export async function generateInitialAutomation(
       complexity,
       estimated_time_hours,
       status: 'generating_workflow',
-      prompt_id: metadataPromptInfo.id,
-      prompt_version: metadataPromptInfo.version,
     })
     .eq('id', automationId)
 
@@ -133,7 +130,7 @@ export async function generateWorkflowInBackground(
 
   try {
     const workflowPromptInfo = await getSystemPrompt(supabase, 'json_generation')
-    const [generated_json, toolRecords] = await Promise.all([
+    const [generated_json_string, toolRecords] = await Promise.all([
       generateWorkflow(supabase, userInput, uniqueToolNames, workflowPromptInfo),
       getToolIds(supabase, uniqueToolNames),
     ])
@@ -141,8 +138,10 @@ export async function generateWorkflowInBackground(
     const { error: updateError } = await supabase
       .from('automations')
       .update({
-        generated_json: generated_json as object,
+        generated_json: generated_json_string,
         status: 'completed',
+        prompt_id: workflowPromptInfo.id,
+        prompt_version: workflowPromptInfo.version,
       })
       .eq('id', automationId)
 

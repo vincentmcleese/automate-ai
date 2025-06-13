@@ -2,34 +2,72 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Calendar, Download, Info, Share2, WorkflowIcon, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Calendar, Download, Info, Share2, Copy, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { Automation, Tool } from '@/types/admin'
-import { WorkflowDisplay } from './WorkflowDisplay'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FormattedDate } from './FormattedDate'
 import { LeaderboardCreatorCard } from './LeaderboardCreatorCard'
 import Image from 'next/image'
 import { toast } from 'sonner'
+import { AnimatedLoading } from '../generate/AnimatedLoading'
 
 export function AutomationContent({ automationId }: { automationId: string }) {
   const [automation, setAutomation] = useState<Automation | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const copyJson = () => {
+    if (!automation?.generated_json) return
+    let jsonString = ''
+    if (typeof automation.generated_json === 'string') {
+      jsonString = automation.generated_json
+    } else {
+      jsonString = JSON.stringify(automation.generated_json, null, 2)
+    }
+    // Attempt to format the string if it's a stringified JSON
+    try {
+      const parsed = JSON.parse(jsonString)
+      jsonString = JSON.stringify(parsed, null, 2)
+    } catch {
+      // Not a valid JSON string, copy as is
+    }
+    navigator.clipboard.writeText(jsonString)
+    toast.success('Content copied to clipboard!')
+  }
+
+  const downloadJson = () => {
+    if (!automation?.generated_json) return
+    let content = ''
+    if (typeof automation.generated_json === 'string') {
+      content = automation.generated_json
+    } else {
+      content = JSON.stringify(automation.generated_json, null, 2)
+    }
+    const blob = new Blob([content], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `automation-${automation.id}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   // Polling logic
   useEffect(() => {
-    if (automation && (automation.status === 'completed' || automation.status === 'failed')) {
+    if (!automation || automation.status === 'completed' || automation.status === 'failed') {
       return
     }
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/automations/${automationId}/status`)
+        const response = await fetch(`/api/automations/${automation.id}/status`)
         const data = await response.json()
 
         if (data.status === 'completed' || data.status === 'failed') {
           // Fetch the full details one last time and stop polling
-          const finalResponse = await fetch(`/api/automations/${automationId}/details`)
+          const finalResponse = await fetch(`/api/automations/${automation.id}/details`)
           const finalData = await finalResponse.json()
           setAutomation(finalData)
           clearInterval(interval)
@@ -40,7 +78,7 @@ export function AutomationContent({ automationId }: { automationId: string }) {
     }, 5000) // Poll every 5 seconds
 
     return () => clearInterval(interval)
-  }, [automation, automationId])
+  }, [automation])
 
   useEffect(() => {
     const fetchAutomationDetails = async () => {
@@ -61,21 +99,6 @@ export function AutomationContent({ automationId }: { automationId: string }) {
     }
     fetchAutomationDetails()
   }, [automationId])
-
-  const downloadJson = () => {
-    if (!automation?.generated_json) return
-
-    const jsonString = JSON.stringify(automation.generated_json, null, 2)
-    const blob = new Blob([jsonString], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `automation-${automation.id}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
 
   if (loading) {
     // This is a minimal loading state, as the page shell has a Suspense fallback
@@ -108,6 +131,12 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Download JSON
+                </Button>
+                <Button variant="outline" className="text-sm" asChild>
+                  <Link href={`/automations/${automation.id}/report`}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    View Report
+                  </Link>
                 </Button>
                 <Button asChild variant="outline" className="text-sm">
                   <Link
@@ -199,12 +228,24 @@ export function AutomationContent({ automationId }: { automationId: string }) {
               {/* Workflow Steps Section */}
               <div>
                 <h2 className="mb-4 flex items-center space-x-2 text-lg font-semibold text-gray-800">
-                  <WorkflowIcon className="h-5 w-5" />
-                  <span>Workflow Steps</span>
+                  <Copy className="h-5 w-5" />
+                  <span>Generated Workflow</span>
                 </h2>
 
                 {automation.status === 'completed' && automation.generated_json ? (
-                  <WorkflowDisplay json={automation.generated_json} />
+                  <div className="space-y-4">
+                    <div className="max-h-[500px] overflow-auto rounded-md bg-gray-900 p-4 font-mono text-sm text-green-400">
+                      <pre>
+                        {typeof automation.generated_json === 'string'
+                          ? automation.generated_json
+                          : JSON.stringify(automation.generated_json, null, 2)}
+                      </pre>
+                    </div>
+                    <Button onClick={copyJson} variant="outline" className="w-full sm:w-auto">
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Content
+                    </Button>
+                  </div>
                 ) : (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center space-y-4 p-6 text-center text-gray-600">
@@ -218,13 +259,7 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                           )}
                         </div>
                       ) : (
-                        <>
-                          <RefreshCw className="h-6 w-6 animate-spin" />
-                          <span>
-                            This automation is still being generated. The page will update
-                            automatically.
-                          </span>
-                        </>
+                        <AnimatedLoading text="This automation is still being generated..." />
                       )}
                     </CardContent>
                   </Card>
