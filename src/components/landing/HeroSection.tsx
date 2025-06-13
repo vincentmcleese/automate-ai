@@ -44,7 +44,7 @@ export function HeroSection({
               alt="Speedy Ghost Mascot"
               width={64}
               height={64}
-              className="h-12 w-12 rounded-xl bg-black/5 drop-shadow-lg sm:h-16 sm:w-16"
+              className="h-12 w-12 rounded-xl bg-white drop-shadow-md sm:h-16 sm:w-16"
               priority
             />
             <motion.h1
