@@ -1,34 +1,65 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import Image from 'next/image'
-
 import { toast } from 'sonner'
 import { WorkflowValidationResult } from '@/types/admin'
 import { AnimatedLoading } from '@/components/generate/AnimatedLoading'
 import { ValidationResultsDisplay } from '@/components/generate/ValidationResultsDisplay'
-
+import { useAuth } from '@/lib/auth/context'
 import { CheckCircle, AlertTriangle, ChevronDown } from 'lucide-react'
 
 type PageState = 'idle' | 'validating' | 'reviewing' | 'creating'
 
 function GenerateAutomationContent() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [pageState, setPageState] = useState<PageState>('idle')
   const [prompt, setPrompt] = useState('')
   const [selectedTools, setSelectedTools] = useState<Record<number, string>>({})
   const [validationResult, setValidationResult] = useState<WorkflowValidationResult | null>(null)
   const [refinedPrompt, setRefinedPrompt] = useState('')
 
+  const claimAutomation = useCallback(
+    async (pendingAutomationId: string) => {
+      setPageState('creating')
+      try {
+        const response = await fetch('/api/automations/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pendingAutomationId }),
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to claim automation.')
+        }
+        toast.success('Automation creation started!')
+        router.push(`/automations/${data.automationId}`)
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
+        setPageState('reviewing')
+      }
+    },
+    [router]
+  )
+
+  useEffect(() => {
+    // This effect handles the post-login claim process
+    if (user && !authLoading) {
+      const pendingId = localStorage.getItem('pendingAutomationId')
+      if (pendingId) {
+        localStorage.removeItem('pendingAutomationId')
+        claimAutomation(pendingId)
+      }
+    }
+  }, [user, authLoading, claimAutomation])
+
   const handleToolSelect = (stepNumber: number, tool: string) => {
-    setSelectedTools(prev => ({
-      ...prev,
-      [stepNumber]: tool,
-    }))
+    setSelectedTools(prev => ({ ...prev, [stepNumber]: tool }))
   }
 
   const handleValidate = async () => {
@@ -58,23 +89,49 @@ function GenerateAutomationContent() {
   }
 
   const handleCreateAutomation = async () => {
-    setPageState('creating')
-    try {
-      const response = await fetch('/api/automations/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userInput: refinedPrompt, selectedTools }),
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create automation')
+    if (!user) {
+      // User is not authenticated, create a pending automation
+      try {
+        setPageState('creating') // Give feedback that something is happening
+        const response = await fetch('/api/automations/pending/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userInput: refinedPrompt,
+            selectedTools,
+            validationResult,
+          }),
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Could not save your work.')
+        }
+        localStorage.setItem('pendingAutomationId', data.pendingAutomationId)
+        router.push('/login?redirectedFrom=/generate-automation')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
+        setPageState('reviewing')
       }
-      const data = await response.json()
-      toast.success('Automation creation started!')
-      router.push(`/automations/${data.automationId}`)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
-      setPageState('reviewing') // Go back to review state on error
+    } else {
+      // User is authenticated, create automation directly
+      setPageState('creating')
+      try {
+        const response = await fetch('/api/automations/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userInput: refinedPrompt, selectedTools }),
+        })
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to create automation')
+        }
+        const data = await response.json()
+        toast.success('Automation creation started!')
+        router.push(`/automations/${data.automationId}`)
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
+        setPageState('reviewing')
+      }
     }
   }
 
