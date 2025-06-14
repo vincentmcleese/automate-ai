@@ -9,6 +9,12 @@ export async function GET(request: NextRequest) {
     ? `/login/continue?pendingAutomationId=${pendingAutomationId}`
     : (searchParams.get('next') ?? '/dashboard')
 
+  // Debug logging for production issues
+  console.log('Auth callback - Environment:', process.env.NODE_ENV)
+  console.log('Auth callback - Origin:', origin)
+  console.log('Auth callback - PendingAutomationId:', pendingAutomationId)
+  console.log('Auth callback - Next URL:', next)
+
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
@@ -17,8 +23,24 @@ export async function GET(request: NextRequest) {
       const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
       const isLocalEnv = process.env.NODE_ENV === 'development'
 
-      const redirectUrl = new URL(next, origin)
+      // Properly construct URL to preserve existing query parameters
+      const redirectUrl = new URL(origin)
+      const [pathname, queryString] = next.split('?')
+      redirectUrl.pathname = pathname
+
+      // Preserve existing query parameters
+      if (queryString) {
+        const existingParams = new URLSearchParams(queryString)
+        existingParams.forEach((value, key) => {
+          redirectUrl.searchParams.set(key, value)
+        })
+      }
+
+      // Add signed_in parameter
       redirectUrl.searchParams.set('signed_in', 'true')
+
+      // Debug logging for redirect URL
+      console.log('Auth callback - Final redirect URL:', redirectUrl.toString())
 
       if (isLocalEnv) {
         // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
