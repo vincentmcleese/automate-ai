@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const journey = localStorage.getItem('automation_journey')
       const redirectTo = journey
-        ? `${window.location.origin}/auth/callback?next=/auth/continue`
+        ? `${window.location.origin}/auth/continue-callback`
         : `${window.location.origin}/auth/callback`
 
       const { error } = await supabase.auth.signInWithOAuth({
