@@ -49,13 +49,8 @@ function GenerateAutomationContent() {
 
   useEffect(() => {
     // This effect handles the post-login claim process
-    if (user && !authLoading) {
-      const pendingId = localStorage.getItem('pendingAutomationId')
-      if (pendingId) {
-        localStorage.removeItem('pendingAutomationId')
-        claimAutomation(pendingId)
-      }
-    }
+    // Note: This is now handled by the /login/continue page
+    // This component no longer needs to handle localStorage
   }, [user, authLoading, claimAutomation])
 
   const handleToolSelect = (stepNumber: number, tool: string) => {
@@ -106,8 +101,9 @@ function GenerateAutomationContent() {
         if (!response.ok) {
           throw new Error(data.error || 'Could not save your work.')
         }
-        localStorage.setItem('pendingAutomationId', data.pendingAutomationId)
-        router.push('/login?redirectedFrom=/generate-automation')
+        router.push(
+          `/login?pendingAutomationId=${data.pendingAutomationId}&redirectedFrom=/generate-automation`
+        )
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
         setPageState('reviewing')

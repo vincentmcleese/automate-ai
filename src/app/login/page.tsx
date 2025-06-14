@@ -13,13 +13,19 @@ function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectedFrom = searchParams.get('redirectedFrom')
+  const pendingAutomationId = searchParams.get('pendingAutomationId')
   const reason = searchParams.get('reason')
 
   useEffect(() => {
     if (user && !loading) {
-      router.push(redirectedFrom || '/dashboard')
+      if (pendingAutomationId) {
+        // Handle pending automation flow
+        router.push(`/login/continue?pendingAutomationId=${pendingAutomationId}`)
+      } else {
+        router.push(redirectedFrom || '/dashboard')
+      }
     }
-  }, [user, loading, router, redirectedFrom])
+  }, [user, loading, router, redirectedFrom, pendingAutomationId])
 
   if (loading) {
     return (

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useAuth } from '@/lib/auth/context'
 import { WorkflowValidationResult, WorkflowStep } from '@/types/admin'
 import { AnimatedLoading } from '@/components/generate/AnimatedLoading'
 import { ValidationResultsDisplay } from '@/components/generate/ValidationResultsDisplay'
@@ -19,6 +20,7 @@ type PageState = 'idle' | 'validating' | 'reviewing' | 'creating'
 
 export default function HomePage() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [pageState, setPageState] = useState<PageState>('idle')
   const [prompt, setPrompt] = useState('')
   const [validationResult, setValidationResult] = useState<WorkflowValidationResult | null>(null)
@@ -32,39 +34,53 @@ export default function HomePage() {
 
       setPageState('creating')
       try {
-        const response = await fetch('/api/automations/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userInput: promptToCreate, selectedTools: toolsToUse }),
-        })
-
-        if (response.status === 401) {
-          localStorage.setItem(
-            'automation_journey',
-            JSON.stringify({
+        // Check auth state FIRST instead of trying API and handling 401
+        if (!user && !authLoading) {
+          // User is not logged in - create pending automation
+          const pendingResponse = await fetch('/api/automations/pending/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
               userInput: promptToCreate,
               selectedTools: toolsToUse,
-              action: 'create',
-            })
+              validationResult: null, // No validation on home page
+            }),
+          })
+
+          if (!pendingResponse.ok) {
+            throw new Error('Failed to save your work')
+          }
+
+          const pendingData = await pendingResponse.json()
+          router.push(
+            `/login?pendingAutomationId=${pendingData.pendingAutomationId}&reason=create_automation`
           )
-          router.push('/login?reason=create_automation')
           return
         }
 
-        const data = await response.json()
+        if (user) {
+          // User is logged in - create automation directly
+          const response = await fetch('/api/automations/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userInput: promptToCreate, selectedTools: toolsToUse }),
+          })
 
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to create automation')
+          const data = await response.json()
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to create automation')
+          }
+
+          toast.success('Automation created successfully!')
+          router.push(`/automations/${data.automationId}`)
         }
-
-        toast.success('Automation created successfully!')
-        router.push(`/automations/${data.automationId}`)
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'An unknown error occurred.')
         setPageState('reviewing')
       }
     },
-    [router]
+    [router, user, authLoading]
   )
 
   const handleValidate = useCallback(

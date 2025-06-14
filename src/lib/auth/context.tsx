@@ -45,15 +45,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
 
-      const journey = localStorage.getItem('automation_journey')
-      const redirectTo = journey
-        ? `${window.location.origin}/auth/continue-callback`
-        : `${window.location.origin}/auth/callback`
+      // Preserve URL parameters (like pendingAutomationId) in OAuth flow
+      const currentParams = new URLSearchParams(window.location.search)
+      const callbackUrl = new URL('/auth/callback', window.location.origin)
+
+      // Copy relevant parameters to callback URL
+      const paramsToPreserve = ['pendingAutomationId', 'next']
+      paramsToPreserve.forEach(param => {
+        const value = currentParams.get(param)
+        if (value) {
+          callbackUrl.searchParams.set(param, value)
+        }
+      })
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo,
+          redirectTo: callbackUrl.toString(),
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

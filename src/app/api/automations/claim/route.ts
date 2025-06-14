@@ -26,14 +26,22 @@ export async function POST(request: Request) {
     }
 
     const { pendingAutomationId } = parseResult.data
+
+    // Check if pending automation exists and hasn't expired
     const { data: pending, error: pendingError } = await supabase
       .from('pending_automations')
       .select('*')
       .eq('id', pendingAutomationId)
+      .gt('expires_at', new Date().toISOString()) // Only non-expired
       .single()
 
     if (pendingError || !pending) {
-      return NextResponse.json({ error: 'Pending automation not found' }, { status: 404 })
+      return NextResponse.json(
+        {
+          error: 'Pending automation not found or has expired',
+        },
+        { status: 404 }
+      )
     }
 
     const { data: newAutomation, error: createError } = await supabase
@@ -43,6 +51,8 @@ export async function POST(request: Request) {
         user_input: pending.user_input,
         status: 'generating',
         user_email: user.email,
+        user_name: user.user_metadata?.full_name,
+        user_avatar_url: user.user_metadata?.avatar_url,
       })
       .select('id')
       .single()
@@ -57,22 +67,16 @@ export async function POST(request: Request) {
       .delete()
       .eq('id', pendingAutomationId)
 
-    let warning
     if (deleteError) {
-      // Log the error but don't fail the request, as the main automation has been created
-      console.error(
-        `Critical but non-blocking error: Failed to delete pending automation record ${pendingAutomationId}.`,
-        deleteError
-      )
-      warning =
-        'Your automation was created successfully, but a temporary record could not be deleted. Please contact support if you experience any issues.'
+      console.error(`Failed to delete pending automation ${pendingAutomationId}:`, deleteError)
+      // Don't fail the request, just log the warning
     }
 
     // 4. Asynchronously generate the automation details
     await generateInitialAutomation(newAutomation.id, pending.user_input, pending.selected_tools)
 
     // 5. Return the new automation ID
-    return NextResponse.json({ automationId: newAutomation.id, warning })
+    return NextResponse.json({ automationId: newAutomation.id })
   } catch (error) {
     console.error('Unexpected error in /api/automations/claim:', error)
     return NextResponse.json({ error: 'An unexpected error occurred.' }, { status: 500 })

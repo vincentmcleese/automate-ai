@@ -19,12 +19,17 @@ export async function POST(request: Request) {
     }
 
     const { userInput, selectedTools, validationResult } = parseResult.data
+
+    // Add expiration (1 hour from now)
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+
     const { data, error } = await supabase
       .from('pending_automations')
       .insert({
         user_input: userInput,
         selected_tools: selectedTools,
         validation_result: validationResult,
+        expires_at: expiresAt,
       })
       .select('id')
       .single()
