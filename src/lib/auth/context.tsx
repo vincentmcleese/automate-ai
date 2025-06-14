@@ -58,6 +58,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
 
+      // Debug logging for OAuth redirect URL
+      console.log('OAuth Debug - Current origin:', window.location.origin)
+      console.log('OAuth Debug - Callback URL:', callbackUrl.toString())
+      console.log('OAuth Debug - Current params:', Object.fromEntries(currentParams))
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
