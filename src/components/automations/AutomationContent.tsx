@@ -69,14 +69,20 @@ export function AutomationContent({ automationId }: { automationId: string }) {
 
   // Polling logic
   useEffect(() => {
+    let isMounted = true
+
     if (!automation || automation.status === 'completed' || automation.status === 'failed') {
       return
     }
 
     const interval = setInterval(async () => {
+      if (!isMounted) return
+
       try {
         const response = await fetch(`/api/automations/${automation.id}/status`)
         const data = await response.json()
+
+        if (!isMounted) return
 
         if (data.status === 'completed' || data.status === 'failed') {
           // Fetch the full details one last time and stop polling
@@ -90,7 +96,10 @@ export function AutomationContent({ automationId }: { automationId: string }) {
       }
     }, 5000) // Poll every 5 seconds
 
-    return () => clearInterval(interval)
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
   }, [automation])
 
   useEffect(() => {
