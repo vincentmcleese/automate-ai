@@ -73,9 +73,13 @@ export function HeroSection({
             placeholder="Reddit AI Marketing Analysis Automation
 
 • Fetch top posts from r/marketing about AI
+
 • Get OpenAI to analyze trending topics
+
 • Generate 5 ad copy variations based on trends
+
 • Save the analysis results to Google Sheets
+
 • Notify my team in Slack that the report is ready
 
 Analysis focuses on: Post titles, upvotes, comments, trending keywords"
