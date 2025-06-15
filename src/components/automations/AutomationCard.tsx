@@ -9,6 +9,7 @@ import { FormattedDate } from './FormattedDate'
 import Link from 'next/link'
 import { Crown, Rocket, Star, Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { memo, useCallback } from 'react'
 
 interface AutomationCardProps {
   automation: AutomationOverview
@@ -33,14 +34,18 @@ const getRankDetails = (rank: number | null | undefined) => {
   return { Icon: null, name: 'Contributor', color: 'text-text-secondary' }
 }
 
-export function AutomationCard({ automation }: AutomationCardProps) {
+function AutomationCardComponent({ automation }: AutomationCardProps) {
   const router = useRouter()
   const rankDetails = getRankDetails(automation.user.rank)
+
+  const handleClick = useCallback(() => {
+    router.push(`/automations/${automation.id}`)
+  }, [router, automation.id])
 
   return (
     <Card
       className="group flex h-full cursor-pointer flex-col overflow-hidden transition-shadow duration-200 hover:shadow-md"
-      onClick={() => router.push(`/automations/${automation.id}`)}
+      onClick={handleClick}
     >
       <CardHeader>
         <CardTitle className="text-text-primary group-hover:text-brand-primary line-clamp-2 text-lg font-semibold transition-colors">
@@ -91,3 +96,5 @@ export function AutomationCard({ automation }: AutomationCardProps) {
     </Card>
   )
 }
+
+export const AutomationCard = memo(AutomationCardComponent)

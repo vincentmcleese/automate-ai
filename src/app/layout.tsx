@@ -5,6 +5,7 @@ import { AuthProvider } from '@/lib/auth/context'
 import { Toaster } from '@/components/ui/sonner'
 import { Header } from '@/components/layout/header'
 import { ToastNotifier } from '@/components/layout/ToastNotifier'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { Suspense } from 'react'
 
 const geistSans = Geist({
@@ -30,16 +31,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          <div className="min-h-screen">
-            <Header />
-            <main>{children}</main>
-          </div>
-          <Toaster />
-          <Suspense>
-            <ToastNotifier />
-          </Suspense>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <div className="min-h-screen">
+              <Header />
+              <ErrorBoundary>
+                <main>{children}</main>
+              </ErrorBoundary>
+            </div>
+            <Toaster />
+            <Suspense>
+              <ToastNotifier />
+            </Suspense>
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

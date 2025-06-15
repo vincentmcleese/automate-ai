@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Crown, Rocket, Star, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { memo } from 'react'
 
 interface LeaderboardCreatorCardProps {
   name: string
@@ -30,7 +31,7 @@ const getRankDetails = (rank: number | null) => {
   return { Icon: null, name: 'Contributor', color: 'text-text-secondary' }
 }
 
-export function LeaderboardCreatorCard({ name, avatarUrl, rank }: LeaderboardCreatorCardProps) {
+function LeaderboardCreatorCardComponent({ name, avatarUrl, rank }: LeaderboardCreatorCardProps) {
   const { Icon, name: rankName, color } = getRankDetails(rank)
 
   return (
@@ -68,3 +69,5 @@ export function LeaderboardCreatorCard({ name, avatarUrl, rank }: LeaderboardCre
     </Card>
   )
 }
+
+export const LeaderboardCreatorCard = memo(LeaderboardCreatorCardComponent)

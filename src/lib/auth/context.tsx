@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { AuthContextType, AuthUser } from '@/types/auth'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -59,9 +60,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       // Debug logging for OAuth redirect URL
-      console.log('OAuth Debug - Current origin:', window.location.origin)
-      console.log('OAuth Debug - Callback URL:', callbackUrl.toString())
-      console.log('OAuth Debug - Current params:', Object.fromEntries(currentParams))
+      logger.debug('OAuth redirect setup', {
+        origin: window.location.origin,
+        callbackUrl: callbackUrl.toString(),
+        params: Object.fromEntries(currentParams),
+      })
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -75,11 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (error) {
-        console.error('Error signing in with Google:', error)
+        logger.authError('Google sign in failed', error)
         toast.error('Failed to sign in with Google')
       }
     } catch (error) {
-      console.error('Unexpected error during Google sign in:', error)
+      logger.authError('Unexpected error during Google sign in', error)
       toast.error('An unexpected error occurred')
     } finally {
       setLoading(false)
@@ -92,11 +95,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signOut()
 
       if (error) {
-        console.error('Error signing out:', error)
+        logger.authError('Sign out failed', error)
         toast.error('Failed to sign out')
       }
     } catch (error) {
-      console.error('Unexpected error during sign out:', error)
+      logger.authError('Unexpected error during sign out', error)
       toast.error('An unexpected error occurred')
     } finally {
       setLoading(false)

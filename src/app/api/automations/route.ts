@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { RawAutomation } from '@/types/admin'
+import { logger } from '@/lib/logger'
 
 // GET /api/automations - Get all automations with user info and rank
 export async function GET(request: NextRequest) {
@@ -25,7 +26,6 @@ export async function GET(request: NextRequest) {
     let automations
     let error
     let count = null
-    let rankMap: Map<string, number> | null = null
 
     if (searchQuery) {
       // Use the new search function
@@ -38,38 +38,52 @@ export async function GET(request: NextRequest) {
       error = searchError
       // Note: count is not easily available with RPC, may need a separate count function if needed
     } else {
-      // Fetch ranks first for non-search scenario
-      const { data: ranks, error: rankError } = await supabase.rpc('get_user_ranks')
-      if (rankError) throw rankError
-      rankMap = new Map(
-        (ranks as { user_id: string; rank: number }[] | null)?.map(r => [r.user_id, r.rank])
+      // Use a single optimized query with ranks included via RPC function
+      const { data: automationsWithRanks, error: fetchError } = await supabase.rpc(
+        'get_automations_with_ranks',
+        {
+          page_limit: limit,
+          page_offset: offset,
+        }
       )
 
-      // Original fetch logic
-      const {
-        data: fetchedAutomations,
-        error: fetchError,
-        count: fetchCount,
-      } = await supabase
-        .from('automations')
-        .select(
-          `
-          id, title, description, user_input, status, created_at, updated_at,
-          user_id, user_name, user_email, user_avatar_url, image_url, tags
-          `,
-          { count: 'exact' }
-        )
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1)
+      if (fetchError) {
+        logger.dbError('get_automations_with_ranks', fetchError)
+        // Fallback to original query without ranks if RPC fails
+        const {
+          data: fetchedAutomations,
+          error: fallbackError,
+          count: fetchCount,
+        } = await supabase
+          .from('automations')
+          .select(
+            `
+            id, title, description, user_input, status, created_at, updated_at,
+            user_id, user_name, user_email, user_avatar_url, image_url, tags
+            `,
+            { count: 'exact' }
+          )
+          .eq('status', 'completed')
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1)
 
-      automations = fetchedAutomations
-      error = fetchError
-      count = fetchCount
+        automations = fetchedAutomations
+        error = fallbackError
+        count = fetchCount
+      } else {
+        automations = automationsWithRanks
+        error = null
+        // Get total count separately for pagination
+        const { count: fetchCount } = await supabase
+          .from('automations')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'completed')
+        count = fetchCount
+      }
     }
 
     if (error) {
-      console.error('Error fetching automations:', error)
+      logger.apiError('/api/automations', error)
       return NextResponse.json({ error: 'Failed to fetch automations' }, { status: 500 })
     }
 
@@ -92,7 +106,7 @@ export async function GET(request: NextRequest) {
 
     // Format the response using data from the automations table
     const formattedAutomations =
-      automations?.map((automation: RawAutomation) => ({
+      automations?.map((automation: RawAutomation & { rank?: number }) => ({
         id: automation.id,
         title: automation.title || 'Untitled Automation',
         description: automation.description || automation.user_input?.substring(0, 150) + '...',
@@ -106,7 +120,7 @@ export async function GET(request: NextRequest) {
           email: automation.user_email,
           name: automation.user_name || 'Anonymous',
           avatar_url: automation.user_avatar_url,
-          rank: automation.rank || rankMap?.get(automation.user_id) || null,
+          rank: automation.rank || null,
         },
       })) || []
 
@@ -120,11 +134,14 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error in automations endpoint:', error)
+    logger.apiError('/api/automations', error)
     return NextResponse.json(
       {
         error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details:
+          process.env.NODE_ENV === 'development' && error instanceof Error
+            ? error.message
+            : undefined,
       },
       { status: 500 }
     )

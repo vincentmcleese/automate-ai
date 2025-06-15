@@ -1,15 +1,35 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import { Crown, Rocket, Star, Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
+import { Suspense } from 'react'
 
 type LeaderboardEntry = {
   user_id: string
   name: string
   avatar_url: string | null
   automations: number
+}
+
+async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/leaderboard`,
+      {
+        cache: 'no-store', // Always fetch fresh data for leaderboard
+      }
+    )
+
+    if (!response.ok) {
+      console.error('Failed to fetch leaderboard:', response.status)
+      return []
+    }
+
+    const data = await response.json()
+    return data.leaderboard || []
+  } catch (error) {
+    console.error('Failed to fetch leaderboard:', error)
+    return []
+  }
 }
 
 // Placeholder for the card component we'll create next
@@ -62,37 +82,21 @@ const TierHeader = ({
   </div>
 )
 
-export default function LeaderboardPage() {
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
-  const [loading, setLoading] = useState(true)
+function LeaderboardLoading() {
+  return (
+    <div className="bg-background flex min-h-screen items-center justify-center">
+      <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
+    </div>
+  )
+}
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const response = await fetch('/api/leaderboard')
-        const data = await response.json()
-        setLeaderboard(data.leaderboard)
-      } catch (error) {
-        console.error('Failed to fetch leaderboard:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchLeaderboard()
-  }, [])
+async function LeaderboardContent() {
+  const leaderboard = await getLeaderboard()
 
   const top1 = leaderboard.slice(0, 1)
   const top5 = leaderboard.slice(1, 5)
   const top20 = leaderboard.slice(5, 20)
   const top100 = leaderboard.slice(20, 100)
-
-  if (loading) {
-    return (
-      <div className="bg-background flex min-h-screen items-center justify-center">
-        Loading Leaderboard...
-      </div>
-    )
-  }
 
   return (
     <div className="bg-background min-h-screen">
@@ -168,5 +172,13 @@ export default function LeaderboardPage() {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function LeaderboardPage() {
+  return (
+    <Suspense fallback={<LeaderboardLoading />}>
+      <LeaderboardContent />
+    </Suspense>
   )
 }

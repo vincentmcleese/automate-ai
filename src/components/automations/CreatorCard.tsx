@@ -2,6 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { memo } from 'react'
 
 interface CreatorCardProps {
   name: string
@@ -18,7 +19,7 @@ const getInitials = (name: string) => {
     .slice(0, 2)
 }
 
-export function CreatorCard({ name, avatarUrl, title }: CreatorCardProps) {
+function CreatorCardComponent({ name, avatarUrl, title }: CreatorCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -37,3 +38,5 @@ export function CreatorCard({ name, avatarUrl, title }: CreatorCardProps) {
     </Card>
   )
 }
+
+export const CreatorCard = memo(CreatorCardComponent)
