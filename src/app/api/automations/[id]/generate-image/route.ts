@@ -1,44 +1,46 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getOpenRouterClient } from '@/lib/openrouter/client'
+import { createErrorResponse, createSuccessResponse } from '@/lib/api/auth-helpers'
+import { validateRouteParams, automationParamsSchema } from '@/lib/api/validation'
 
 // POST /api/automations/[id]/generate-image - Generate image for automation
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  console.log('🎨 Image generation endpoint called')
+  // Authenticate user first
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return createErrorResponse('Authentication required', 401)
+  }
+
+  const { id } = await params
+
+  // Validate automation ID
+  const paramValidation = validateRouteParams({ id }, automationParamsSchema)
+  if (!paramValidation.success) {
+    return createErrorResponse('Invalid automation ID', 400)
+  }
 
   try {
-    const supabase = await createClient()
     const openRouterClient = getOpenRouterClient()
-    const { id } = await params
 
-    console.log('📝 Fetching automation:', id)
-
-    // Get the automation details
+    // Get the automation details (with ownership check)
     const { data: automation, error: automationError } = await supabase
       .from('automations')
       .select('*')
       .eq('id', id)
+      .eq('user_id', user.id) // Ensure user owns this automation
       .single()
 
     if (automationError || !automation) {
-      console.error('❌ Automation not found:', automationError)
-      return NextResponse.json({ error: 'Automation not found' }, { status: 404 })
+      return createErrorResponse('Automation not found', 404)
     }
 
-    console.log('✅ Automation found:', automation.title)
-
     // Get the image generation prompt
-    console.log('🔍 Fetching image generation prompt...')
-
-    // First, let's see all prompts for debugging
-    const { data: allPrompts } = await supabase
-      .from('system_prompts')
-      .select('id, name, category, is_active')
-
-    console.log('📋 All prompts in database:', allPrompts)
-    console.log('🔍 Looking for category: "image_generation"')
-
     const { data: imagePrompt, error: promptError } = await supabase
       .from('system_prompts')
       .select('*')
@@ -48,14 +50,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .limit(1)
       .single()
 
-    console.log('📝 Query result:', { imagePrompt: imagePrompt?.name || null, promptError })
-
     if (promptError || !imagePrompt) {
-      console.error('❌ Image generation prompt not found:', promptError)
-      return NextResponse.json({ error: 'Image generation prompt not available' }, { status: 500 })
+      return createErrorResponse('Image generation prompt not available', 500)
     }
-
-    console.log('✅ Found image generation prompt:', imagePrompt.name)
 
     // Extract workflow summary from generated JSON
     const workflowSummary =
@@ -72,8 +69,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       )
       .replace(/\{\{workflow_summary\}\}/g, workflowSummary)
 
-    console.log('🤖 Generating image prompt with OpenRouter...')
-
     // Call OpenRouter to generate the image prompt
     const imagePromptText = await openRouterClient.complete(processedPrompt, 'openai/gpt-4o-mini', {
       temperature: 0.8,
@@ -81,14 +76,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     })
 
     if (!imagePromptText) {
-      console.error('❌ Failed to generate image prompt')
-      return NextResponse.json({ error: 'Failed to generate image' }, { status: 500 })
+      return createErrorResponse('Failed to generate image prompt', 500)
     }
 
-    console.log('✅ Image prompt generated:', imagePromptText.substring(0, 100) + '...')
-
     // Generate image using DALL-E directly through OpenAI (not OpenRouter)
-    console.log('🎨 Generating image with DALL-E...')
     const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
@@ -105,43 +96,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }),
     })
 
-    console.log('📊 DALL-E API response status:', imageResponse.status)
-
     if (!imageResponse.ok) {
-      let errorMessage = `DALL-E API failed with status ${imageResponse.status}`
+      // Log detailed error for debugging but don't expose to client
       try {
         const errorData = await imageResponse.json()
-        console.error('❌ DALL-E API error (JSON):', errorData)
-        errorMessage = errorData.error?.message || errorData.message || errorMessage
+        console.error('DALL-E API error:', {
+          status: imageResponse.status,
+          error: errorData,
+        })
       } catch {
-        // Response is not JSON, try to get text
-        try {
-          const errorText = await imageResponse.text()
-          console.error('❌ DALL-E API error (text):', errorText)
-          errorMessage = errorText || errorMessage
-        } catch {
-          console.error('❌ DALL-E API error: Could not parse response')
-        }
+        console.error('DALL-E API error:', {
+          status: imageResponse.status,
+          text: await imageResponse.text().catch(() => 'Could not read response'),
+        })
       }
-      return NextResponse.json(
-        { error: 'Failed to generate image', details: errorMessage },
-        { status: 500 }
-      )
+
+      return createErrorResponse('Failed to generate image', 500)
     }
 
     const imageData = await imageResponse.json()
-    console.log('📷 DALL-E response structure:', Object.keys(imageData))
-
     const imageUrl = imageData.data?.[0]?.url
 
     if (!imageUrl) {
-      console.error('❌ No image URL returned from DALL-E, response:', imageData)
-      return NextResponse.json({ error: 'No image URL returned' }, { status: 500 })
+      console.error('No image URL returned from DALL-E')
+      return createErrorResponse('No image URL returned', 500)
     }
-
-    console.log('✅ Image URL received:', imageUrl.substring(0, 100) + '...')
-
-    console.log('📥 Downloading and storing image...')
 
     // Download the image and upload to Supabase Storage
     const imageBlob = await fetch(imageUrl).then(r => r.blob())
@@ -154,7 +133,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     )
 
     // Upload to Supabase Storage using service role
-    console.log('📤 Uploading image to Supabase Storage with service role...')
     const { error: uploadError } = await serviceSupabase.storage
       .from('automation-images')
       .upload(fileName, imageBlob, {
@@ -163,11 +141,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
 
     if (uploadError) {
-      console.error('❌ Storage upload error:', uploadError)
-      return NextResponse.json(
-        { error: 'Failed to store image', details: uploadError.message },
-        { status: 500 }
-      )
+      console.error('Storage upload error:', uploadError)
+      return createErrorResponse('Failed to store image', 500)
     }
 
     // Get the public URL using the service client
@@ -176,36 +151,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .getPublicUrl(fileName)
 
     const storedImageUrl = publicUrlData.publicUrl
-    console.log('✅ Image stored at:', storedImageUrl)
 
     // Update automation with image URL using regular client
     const { data: updatedAutomation, error: updateError } = await supabase
       .from('automations')
       .update({ image_url: storedImageUrl })
       .eq('id', id)
+      .eq('user_id', user.id) // Ensure ownership
       .select()
       .single()
 
     if (updateError) {
-      console.error('❌ Error updating automation with image URL:', updateError)
-      return NextResponse.json({ error: 'Failed to save image URL' }, { status: 500 })
+      console.error('Error updating automation with image URL:', updateError)
+      return createErrorResponse('Failed to save image URL', 500)
     }
 
-    console.log('🎉 Image generation completed successfully!')
-
-    return NextResponse.json({
-      success: true,
+    return createSuccessResponse({
       image_url: storedImageUrl,
       automation: updatedAutomation,
     })
   } catch (error) {
-    console.error('💥 Error in image generation:', error)
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
+    console.error('Error in image generation:', error)
+    return createErrorResponse(
+      'Internal server error',
+      500,
+      process.env.NODE_ENV === 'development' ? error : undefined
     )
   }
 }

@@ -141,19 +141,7 @@ export function WorkflowBuilder() {
     const userInput = params.get('userInput')
     const toolsParam = params.get('selectedTools')
     const action = params.get('action')
-    const oauthCode = params.get('code')
-
-    // 🚨 DEBUG: Check if OAuth code is being sent to homepage instead of /auth/callback
-    if (oauthCode) {
-      console.error('🚨 OAUTH DEBUG: Homepage received OAuth code!', {
-        code: oauthCode,
-        currentUrl: window.location.href,
-        allParams: Object.fromEntries(params),
-      })
-
-      // This should never happen - OAuth should go to /auth/callback
-      toast.error('OAuth redirect error - please check Supabase configuration')
-    }
+    // Remove OAuth workaround once Supabase config is fixed
 
     if (action === 'create' && userInput) {
       const selectedTools = toolsParam ? JSON.parse(toolsParam) : undefined

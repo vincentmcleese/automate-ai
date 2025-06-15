@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnonClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { getOpenRouterClient } from '@/lib/openrouter/client'
 import { z } from 'zod'
 import { WorkflowStep } from '@/types/admin'
+import { createErrorResponse } from '@/lib/api/auth-helpers'
 
 const requestBodySchema = z.object({
   workflow_description: z.string().min(1, 'Workflow description is required'),
@@ -10,17 +11,21 @@ const requestBodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createAnonClient()
+    const supabase = await createClient()
+
+    // Optional authentication - allow both authenticated and unauthenticated users
+    // but use authenticated client for database access to ensure RLS policies apply
+    await supabase.auth.getUser()
+
+    // Note: This endpoint allows unauthenticated access for workflow validation
+    // but uses authenticated client to respect RLS policies on system_prompts and tools
     const openRouterClient = getOpenRouterClient()
 
     const body = await request.json()
     const validation = requestBodySchema.safeParse(body)
 
     if (!validation.success) {
-      return NextResponse.json(
-        { error: 'Invalid request body', details: validation.error.flatten() },
-        { status: 400 }
-      )
+      return createErrorResponse('Invalid request body', 400, validation.error.flatten())
     }
 
     const { workflow_description } = validation.data
@@ -35,9 +40,10 @@ export async function POST(request: NextRequest) {
 
     if (promptError || !promptData) {
       console.error('Error fetching validation prompt:', promptError)
-      return NextResponse.json(
-        { error: 'Validation system prompt not found or is inactive.' },
-        { status: 503 }
+      return createErrorResponse(
+        'Validation system prompt not found or is inactive.',
+        503,
+        promptError
       )
     }
 
@@ -118,6 +124,10 @@ export async function POST(request: NextRequest) {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : 'No stack trace available',
     })
-    return NextResponse.json({ error: 'An unexpected error occurred.' }, { status: 500 })
+    return createErrorResponse(
+      'An unexpected error occurred.',
+      500,
+      process.env.NODE_ENV === 'development' ? error : undefined
+    )
   }
 }
