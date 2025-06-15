@@ -70,7 +70,14 @@ export function HeroSection({
           className="space-y-4"
         >
           <Textarea
-            placeholder="e.g., When a new lead signs up, send their info to Salesforce, add them to Mailchimp, and notify sales in Slack."
+            placeholder="Every week, automatically analyze top Reddit posts about 'AI marketing' and create ad copy:
+1. Fetch top posts from r/marketing about AI
+2. Get OpenAI to analyze trending topics
+3. Then generate 5 ad copy variations based on trends
+4. Save the analysis results to Google Sheets 
+5. Notify my team in Slack that the top is ready
+
+Analysis focuses on: Post titles, upvotes, comments, trending keywords"
             rows={4}
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
