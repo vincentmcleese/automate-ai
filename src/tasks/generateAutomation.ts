@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { getOpenRouterClient } from '@/lib/openrouter/client'
+import { generateSlug } from '@/lib/utils/slugify'
 
 type AutomationMetadata = {
   title: string
@@ -142,11 +143,16 @@ export async function generateInitialAutomation(
   const metadata = await generateMetadata(supabase, userInput, uniqueToolNames, metadataPromptInfo)
 
   const { title, description, tags, complexity, estimated_time_hours } = metadata
+
+  // Generate slug from title
+  const slug = generateSlug(title)
+
   const { error: updateError } = await supabase
     .from('automations')
     .update({
       title,
       description,
+      slug,
       tags,
       complexity,
       estimated_time_hours,

@@ -39,8 +39,10 @@ function AutomationCardComponent({ automation }: AutomationCardProps) {
   const rankDetails = getRankDetails(automation.user.rank)
 
   const handleClick = useCallback(() => {
-    router.push(`/automations/${automation.id}`)
-  }, [router, automation.id])
+    // Use slug if available, fallback to ID
+    const identifier = automation.slug || automation.id
+    router.push(`/automations/${identifier}`)
+  }, [router, automation.id, automation.slug])
 
   return (
     <Card

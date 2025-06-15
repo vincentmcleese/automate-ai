@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { AutomationContent } from '@/components/automations/AutomationContent'
 import { createClient } from '@/lib/supabase/server'
+import { isUUID } from '@/lib/utils/identifier'
 
 interface AutomationPageProps {
   params: Promise<{
@@ -8,9 +9,30 @@ interface AutomationPageProps {
   }>
 }
 
-// This page is now a simple shell. The client component will handle all data fetching.
+// This page handles both UUID and slug identifiers
 export default async function AutomationPage({ params }: AutomationPageProps) {
   const { id } = await params
+
+  // Resolve identifier to automation ID
+  let automationId = id
+
+  // If it's a slug (not UUID), resolve it to get the actual ID
+  if (!isUUID(id)) {
+    const supabase = await createClient()
+    const { data: automation } = await supabase
+      .from('automations')
+      .select('id')
+      .eq('slug', id)
+      .single()
+
+    if (!automation) {
+      // Slug not found, let the component handle the error
+      automationId = id
+    } else {
+      automationId = automation.id
+    }
+  }
+
   return (
     <Suspense
       fallback={
@@ -22,7 +44,7 @@ export default async function AutomationPage({ params }: AutomationPageProps) {
         </div>
       }
     >
-      <AutomationContent automationId={id} />
+      <AutomationContent automationId={automationId} />
     </Suspense>
   )
 }
@@ -30,11 +52,17 @@ export default async function AutomationPage({ params }: AutomationPageProps) {
 export async function generateMetadata({ params }: AutomationPageProps) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: automation } = await supabase
-    .from('automations')
-    .select('title, description, user_input')
-    .eq('id', id)
-    .single()
+
+  // Handle both UUID and slug for metadata
+  let query = supabase.from('automations').select('title, description, user_input, slug')
+
+  if (isUUID(id)) {
+    query = query.eq('id', id)
+  } else {
+    query = query.eq('slug', id)
+  }
+
+  const { data: automation } = await query.single()
 
   if (!automation) {
     return {

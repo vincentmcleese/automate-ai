@@ -236,6 +236,7 @@ export interface RawAutomation {
   id: string
   title: string | null
   description: string | null
+  slug: string | null
   user_input: string
   status: 'pending' | 'generating' | 'completed' | 'failed'
   created_at: string
@@ -278,6 +279,7 @@ export interface AutomationOverview {
   id: string
   title: string
   description: string
+  slug?: string
   created_at: string
   updated_at: string
   status: 'generating' | 'completed' | 'failed'

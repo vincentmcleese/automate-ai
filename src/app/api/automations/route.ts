@@ -38,48 +38,27 @@ export async function GET(request: NextRequest) {
       error = searchError
       // Note: count is not easily available with RPC, may need a separate count function if needed
     } else {
-      // Use a single optimized query with ranks included via RPC function
-      const { data: automationsWithRanks, error: fetchError } = await supabase.rpc(
-        'get_automations_with_ranks',
-        {
-          page_limit: limit,
-          page_offset: offset,
-        }
-      )
+      // Use direct query (RPC function not available)
+      const {
+        data: fetchedAutomations,
+        error: fetchError,
+        count: fetchCount,
+      } = await supabase
+        .from('automations')
+        .select(
+          `
+          id, title, description, slug, user_input, status, created_at, updated_at,
+          user_id, user_name, user_email, user_avatar_url, image_url, tags
+          `,
+          { count: 'exact' }
+        )
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
 
-      if (fetchError) {
-        logger.dbError('get_automations_with_ranks', fetchError)
-        // Fallback to original query without ranks if RPC fails
-        const {
-          data: fetchedAutomations,
-          error: fallbackError,
-          count: fetchCount,
-        } = await supabase
-          .from('automations')
-          .select(
-            `
-            id, title, description, user_input, status, created_at, updated_at,
-            user_id, user_name, user_email, user_avatar_url, image_url, tags
-            `,
-            { count: 'exact' }
-          )
-          .eq('status', 'completed')
-          .order('created_at', { ascending: false })
-          .range(offset, offset + limit - 1)
-
-        automations = fetchedAutomations
-        error = fallbackError
-        count = fetchCount
-      } else {
-        automations = automationsWithRanks
-        error = null
-        // Get total count separately for pagination
-        const { count: fetchCount } = await supabase
-          .from('automations')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'completed')
-        count = fetchCount
-      }
+      automations = fetchedAutomations
+      error = fetchError
+      count = fetchCount
     }
 
     if (error) {
@@ -110,6 +89,7 @@ export async function GET(request: NextRequest) {
         id: automation.id,
         title: automation.title || 'Untitled Automation',
         description: automation.description || automation.user_input?.substring(0, 150) + '...',
+        slug: automation.slug,
         created_at: automation.created_at,
         updated_at: automation.updated_at,
         status: automation.status,
@@ -120,7 +100,7 @@ export async function GET(request: NextRequest) {
           email: automation.user_email,
           name: automation.user_name || 'Anonymous',
           avatar_url: automation.user_avatar_url,
-          rank: automation.rank || null,
+          rank: null, // Temporarily disable ranks until RPC function is available
         },
       })) || []
 
