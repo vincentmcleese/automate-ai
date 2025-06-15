@@ -70,12 +70,13 @@ export function HeroSection({
           className="space-y-4"
         >
           <Textarea
-            placeholder="Every week, automatically analyze top Reddit posts about 'AI marketing' and create ad copy:
-1. Fetch top posts from r/marketing about AI
-2. Get OpenAI to analyze trending topics
-3. Then generate 5 ad copy variations based on trends
-4. Save the analysis results to Google Sheets 
-5. Notify my team in Slack that the top is ready
+            placeholder="Reddit AI Marketing Analysis Automation
+
+• Fetch top posts from r/marketing about AI
+• Get OpenAI to analyze trending topics
+• Generate 5 ad copy variations based on trends
+• Save the analysis results to Google Sheets
+• Notify my team in Slack that the report is ready
 
 Analysis focuses on: Post titles, upvotes, comments, trending keywords"
             rows={4}

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "mcp-server-postgres",
+      "args": [
+        "postgresql://postgres:k2Z6W6hq!baoCJ@db.gspwpdcthnikqljintul.supabase.co:5432/postgres"
+      ]
+    }
+  }
+}
