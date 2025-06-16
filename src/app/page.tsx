@@ -2,22 +2,30 @@ import { WorkflowBuilder } from '@/components/landing/WorkflowBuilder'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'AutomateAI - Create AI-Powered Automations Instantly',
+  title: 'Launch GhostTeam - Create AI-Powered Automations Instantly',
   description:
-    'Transform your ideas into powerful automations with AI. Connect your favorite tools, automate workflows, and boost productivity in minutes.',
-  keywords: ['automation', 'AI', 'workflow', 'productivity', 'n8n', 'zapier alternative'],
+    'Launch your GhostTeam and transform ideas into powerful automations with AI. Connect your favorite tools, automate workflows, and boost productivity in minutes.',
+  keywords: [
+    'automation',
+    'AI',
+    'workflow',
+    'productivity',
+    'ghostteam',
+    'n8n',
+    'zapier alternative',
+  ],
   openGraph: {
-    title: 'AutomateAI - Create AI-Powered Automations Instantly',
+    title: 'Launch GhostTeam - Create AI-Powered Automations Instantly',
     description:
-      'Transform your ideas into powerful automations with AI. Connect your favorite tools, automate workflows, and boost productivity in minutes.',
+      'Launch your GhostTeam and transform ideas into powerful automations with AI. Connect your favorite tools, automate workflows, and boost productivity in minutes.',
     type: 'website',
-    url: 'https://www.automateai.dev',
+    url: 'https://launch.ghostteam.ai',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AutomateAI - Create AI-Powered Automations Instantly',
+    title: 'Launch GhostTeam - Create AI-Powered Automations Instantly',
     description:
-      'Transform your ideas into powerful automations with AI. Connect your favorite tools, automate workflows, and boost productivity in minutes.',
+      'Launch your GhostTeam and transform ideas into powerful automations with AI. Connect your favorite tools, automate workflows, and boost productivity in minutes.',
   },
 }
 

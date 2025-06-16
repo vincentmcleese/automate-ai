@@ -76,7 +76,7 @@ export async function generateMetadata({ params }: AutomationPageProps) {
     automation.user_input.slice(0, 60) + (automation.user_input.length > 60 ? '...' : '')
 
   return {
-    title: `${title} | AutomateAI`,
+    title: `${title} | Launch GhostTeam`,
     description:
       automation.description ||
       automation.user_input.slice(0, 160) + (automation.user_input.length > 160 ? '...' : ''),

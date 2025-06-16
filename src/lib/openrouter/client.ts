@@ -9,8 +9,8 @@ interface Site {
 }
 
 export const siteConfig: Site = {
-  name: 'AutomateAI',
-  url: 'https://www.automateai.dev',
+  name: 'Launch GhostTeam',
+  url: 'https://launch.ghostteam.ai',
 }
 
 export type OpenRouterModel = {
@@ -57,7 +57,7 @@ export class OpenRouterClient {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.apiKey}`,
           'HTTP-Referer': this.referer,
-          'X-Title': 'AutomateAI',
+          'X-Title': 'Launch GhostTeam',
         },
         body: JSON.stringify({
           model,
@@ -173,7 +173,7 @@ export class OpenRouterClient {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.apiKey}`,
           'HTTP-Referer': this.referer,
-          'X-Title': 'AutomateAI',
+          'X-Title': 'Launch GhostTeam',
         },
         body: JSON.stringify({
           model,

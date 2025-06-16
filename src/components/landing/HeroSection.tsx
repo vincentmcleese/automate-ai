@@ -32,9 +32,9 @@ export function HeroSection({
   const steps = [
     '1. Fetch top posts from r/marketing about AI',
     '2. Get OpenAI to analyze trending topics',
-    '3. Generate 5 ad copy variations based on trends',
+    '3. Then generate 5 LinkedIn post copy variations based on trends',
     '4. Save the analysis results to Google Sheets',
-    '5. Notify my team in Slack that the report is ready',
+    '5. Notify my team in Slack that the top is ready',
   ]
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export function HeroSection({
     const typeText = () => {
       if (phase === 0) {
         // Add title
-        currentText = 'Reddit AI Marketing Analysis Automation\n'
+        currentText = '"AI marketing" and create LinkedIn post copy\n'
         setAnimatedText(currentText)
         phase = 1
         setTimeout(typeText, 800)
@@ -84,7 +84,7 @@ export function HeroSection({
     textareaRef.current?.focus()
   }
   return (
-    <div className="relative isolate py-12 sm:py-20 lg:py-32">
+    <div className="relative isolate py-6 sm:py-12 lg:py-20">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -126,7 +126,15 @@ export function HeroSection({
               </h1>
             </motion.div>
           </motion.div>
-          <div className="mt-8 sm:mt-12">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-muted-foreground mt-6 text-lg sm:text-xl lg:text-2xl"
+          >
+            With just a prompt, create any AI Agent or Automation in n8n
+          </motion.p>
+          <div className="mt-4 sm:mt-12">
             <ProcessSteps />
           </div>
         </div>

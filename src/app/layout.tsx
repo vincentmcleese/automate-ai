@@ -27,8 +27,10 @@ const chunkoBold = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'AutomateAI - Intelligent Automation Platform',
-  description: 'Streamline your workflow with AI-powered automation tools',
+  title: 'Launch GhostTeam - AI-Powered Workflow Automation',
+  description:
+    'Launch your GhostTeam and automate workflows with AI. Create intelligent automations that streamline your business processes.',
+  metadataBase: new URL('https://launch.ghostteam.ai'),
 }
 
 export default function RootLayout({

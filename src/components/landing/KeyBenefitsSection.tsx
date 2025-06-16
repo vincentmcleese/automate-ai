@@ -31,7 +31,7 @@ export function KeyBenefitsSection() {
             A Radically Faster Way to Build
           </h2>
           <p className="text-muted-foreground mt-6 text-lg leading-8">
-            Go from idea to implementation in minutes, not days. AutomateAI is perfect for
+            Go from idea to implementation in minutes, not days. Launch GhostTeam is perfect for
             developers and non-technical users alike.
           </p>
         </div>
