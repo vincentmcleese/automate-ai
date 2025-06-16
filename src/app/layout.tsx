@@ -7,6 +7,8 @@ import { Toaster } from '@/components/ui/sonner'
 import { Header } from '@/components/layout/header'
 import { ToastNotifier } from '@/components/layout/ToastNotifier'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { PostHogProvider } from './providers'
+import { GoogleAnalytics } from '@next/third-parties/google'
 import { Suspense } from 'react'
 
 const geistSans = Geist({
@@ -43,20 +45,23 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${chunkoBold.variable} antialiased`}
       >
-        <ErrorBoundary>
-          <AuthProvider>
-            <div className="min-h-screen">
-              <Header />
-              <ErrorBoundary>
-                <main>{children}</main>
-              </ErrorBoundary>
-            </div>
-            <Toaster />
-            <Suspense>
-              <ToastNotifier />
-            </Suspense>
-          </AuthProvider>
-        </ErrorBoundary>
+        <PostHogProvider>
+          <ErrorBoundary>
+            <AuthProvider>
+              <div className="min-h-screen">
+                <Header />
+                <ErrorBoundary>
+                  <main>{children}</main>
+                </ErrorBoundary>
+              </div>
+              <Toaster />
+              <Suspense>
+                <ToastNotifier />
+              </Suspense>
+            </AuthProvider>
+          </ErrorBoundary>
+        </PostHogProvider>
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || ''} />
       </body>
     </html>
   )
