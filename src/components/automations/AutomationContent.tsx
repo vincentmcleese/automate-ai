@@ -137,11 +137,12 @@ export function AutomationContent({ automationId }: { automationId: string }) {
         <div className="space-y-8">
           {/* Page Header */}
           <header className="space-y-4">
-            <div className="flex items-center justify-between">
+            {/* Desktop: Normal layout */}
+            <div className="hidden sm:flex sm:items-center sm:justify-between">
               <Button variant="ghost" asChild className="text-sm text-gray-600">
                 <Link href="/automations">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Automations
+                  All Automations
                 </Link>
               </Button>
               <div className="flex items-center space-x-2">
@@ -169,8 +170,46 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                 </Button>
               </div>
             </div>
+
+            {/* Mobile: Back button only */}
+            <div className="sm:hidden">
+              <Button variant="ghost" asChild className="w-fit text-sm text-gray-600">
+                <Link href="/automations">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  All Automations
+                </Link>
+              </Button>
+            </div>
+
+            {/* Title */}
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-gray-900">{automation.title}</h1>
+              <h1 className="text-xl font-bold text-gray-900 sm:text-3xl">{automation.title}</h1>
+            </div>
+
+            {/* Mobile: Action buttons under title */}
+            <div className="flex flex-col space-y-2 sm:hidden">
+              <Button
+                variant="outline"
+                className="text-sm"
+                onClick={downloadJson}
+                disabled={automation.status !== 'completed'}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download JSON
+              </Button>
+              <Button asChild variant="outline" className="text-sm">
+                <Link
+                  href="https://www.ghostteam.ai/begin?utm_source=automation"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Help me implement
+                </Link>
+              </Button>
+              <Button variant="outline" className="text-sm">
+                <Share2 className="mr-2 h-4 w-4" />
+                Share
+              </Button>
             </div>
           </header>
 
@@ -271,7 +310,7 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                           )}
                         </div>
                       ) : (
-                        <AnimatedLoading text="This automation is still being generated..." />
+                        <AnimatedLoading text="Generating automation..." />
                       )}
                     </CardContent>
                   </Card>

@@ -265,9 +265,7 @@ export function WorkflowBuilder() {
 
       {isLoading && (
         <AnimatedLoading
-          text={
-            pageState === 'validating' ? 'Analyzing your prompt...' : 'Building your automation...'
-          }
+          text={pageState === 'validating' ? 'Analyzing your prompt...' : 'Crafting automation...'}
         />
       )}
     </>

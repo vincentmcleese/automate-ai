@@ -201,7 +201,7 @@ function GenerateAutomationContent() {
         )}
 
         {pageState === 'validating' && <AnimatedLoading text="Analyzing your prompt..." />}
-        {pageState === 'creating' && <AnimatedLoading text="Building your automation..." />}
+        {pageState === 'creating' && <AnimatedLoading text="Crafting automation..." />}
 
         {pageState === 'reviewing' && validationResult && (
           <div className="space-y-8">

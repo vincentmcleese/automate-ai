@@ -47,7 +47,7 @@ export function HeroSection({
     const typeText = () => {
       if (phase === 0) {
         // Add title
-        currentText = '"AI marketing" and create LinkedIn post copy\n'
+        currentText = 'e.g. "AI marketing" and create LinkedIn post copy\n'
         setAnimatedText(currentText)
         phase = 1
         setTimeout(typeText, 800)
@@ -134,7 +134,7 @@ export function HeroSection({
           >
             With just a prompt, create any AI Agent or Automation in n8n
           </motion.p>
-          <div className="mt-4 sm:mt-12">
+          <div className="mt-4 hidden sm:mt-12 sm:block">
             <ProcessSteps />
           </div>
         </div>
@@ -148,7 +148,7 @@ export function HeroSection({
             <Textarea
               ref={textareaRef}
               placeholder=""
-              rows={4}
+              rows={6}
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
               onFocus={handleFocus}

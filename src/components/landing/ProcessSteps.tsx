@@ -56,7 +56,7 @@ export function ProcessSteps() {
           className="relative z-10 flex w-full items-center justify-start gap-6 sm:w-auto sm:justify-center"
           variants={itemVariants}
         >
-          <div className="relative flex items-center gap-3 pl-10 sm:pl-0">
+          <div className="relative flex items-center gap-3 pl-14 sm:pl-0">
             <div className="bg-background text-primary absolute left-0 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border shadow-sm sm:static">
               {step.icon}
             </div>

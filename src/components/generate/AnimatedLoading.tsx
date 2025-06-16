@@ -27,7 +27,7 @@ const itemVariants = {
 
 export function AnimatedLoading({ text }: { text: string }) {
   return (
-    <div className="border-border bg-card flex flex-col items-center justify-center space-y-6 rounded-lg border p-8">
+    <div className="border-border bg-card flex flex-col items-center justify-center space-y-6 rounded-lg border p-4 sm:p-8">
       <motion.div
         animate={{ rotate: [0, 360], scale: [1, 1.2, 1] }}
         transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -38,7 +38,7 @@ export function AnimatedLoading({ text }: { text: string }) {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="text-text-secondary flex items-center justify-center space-x-1.5 text-lg font-medium"
+        className="text-text-secondary flex items-center justify-center space-x-1 overflow-hidden text-base font-medium sm:space-x-1.5 sm:text-lg"
       >
         {text.split('').map((char, index) => (
           <motion.span key={index} variants={itemVariants}>
