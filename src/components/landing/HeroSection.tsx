@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { RefreshCw } from 'lucide-react'
 import Image from 'next/image'
 import { ProcessSteps } from './ProcessSteps'
+import { useState, useEffect, useRef } from 'react'
 
 interface HeroSectionProps {
   prompt: string
@@ -24,6 +25,64 @@ export function HeroSection({
   buttonText,
   onInspireMe,
 }: HeroSectionProps) {
+  const [showAnimatedPlaceholder, setShowAnimatedPlaceholder] = useState(true)
+  const [animatedText, setAnimatedText] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const steps = [
+    '1. Fetch top posts from r/marketing about AI',
+    '2. Get OpenAI to analyze trending topics',
+    '3. Generate 5 ad copy variations based on trends',
+    '4. Save the analysis results to Google Sheets',
+    '5. Notify my team in Slack that the report is ready',
+  ]
+
+  useEffect(() => {
+    if (!showAnimatedPlaceholder || prompt) return
+
+    let phase = 0 // 0: title, 1: steps, 2: analysis
+    let stepIndex = 0
+    let currentText = ''
+
+    const typeText = () => {
+      if (phase === 0) {
+        // Add title
+        currentText = 'Reddit AI Marketing Analysis Automation\n'
+        setAnimatedText(currentText)
+        phase = 1
+        setTimeout(typeText, 800)
+      } else if (phase === 1 && stepIndex < steps.length) {
+        // Add each step to the same line
+        if (stepIndex === 0) {
+          currentText += steps[stepIndex]
+        } else {
+          currentText += '  ' + steps[stepIndex]
+        }
+        setAnimatedText(currentText)
+        stepIndex++
+        setTimeout(typeText, 1000)
+      } else if (phase === 1 && stepIndex >= steps.length) {
+        // Move to analysis phase
+        currentText += '\n\nAnalysis focuses on: Post titles, upvotes, comments, trending keywords'
+        setAnimatedText(currentText)
+        phase = 2
+      }
+    }
+
+    const timer = setTimeout(typeText, 1000) // Initial delay
+    return () => clearTimeout(timer)
+  }, [showAnimatedPlaceholder, prompt])
+
+  const handleFocus = () => {
+    setShowAnimatedPlaceholder(false)
+    setAnimatedText('')
+  }
+
+  const handleClick = () => {
+    setShowAnimatedPlaceholder(false)
+    setAnimatedText('')
+    textareaRef.current?.focus()
+  }
   return (
     <div className="relative isolate py-12 sm:py-20 lg:py-32">
       <motion.div
@@ -47,17 +106,25 @@ export function HeroSection({
               className="h-12 w-12 rounded-xl bg-white drop-shadow-md sm:h-16 sm:w-16"
               priority
             />
-            <motion.h1
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-foreground text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl"
+              className="flex flex-col items-center"
             >
-              Ghost{' '}
-              <span className="from-primary bg-gradient-to-r to-teal-400 bg-clip-text text-transparent">
-                Flows
+              <span
+                className="text-foreground/80 text-lg font-normal sm:text-xl lg:text-2xl"
+                style={{ letterSpacing: '0.5em' }}
+              >
+                launch your
               </span>
-            </motion.h1>
+              <h1 className="text-foreground font-chunko text-3xl tracking-wider sm:text-5xl lg:text-6xl">
+                <span className="from-primary bg-gradient-to-r to-teal-400 bg-clip-text text-transparent">
+                  GHOST
+                </span>
+                TEAM
+              </h1>
+            </motion.div>
           </motion.div>
           <div className="mt-8 sm:mt-12">
             <ProcessSteps />
@@ -69,25 +136,27 @@ export function HeroSection({
           transition={{ duration: 0.5, delay: 0.3 }}
           className="space-y-4"
         >
-          <Textarea
-            placeholder="Reddit AI Marketing Analysis Automation
-
-• Fetch top posts from r/marketing about AI
-
-• Get OpenAI to analyze trending topics
-
-• Generate 5 ad copy variations based on trends
-
-• Save the analysis results to Google Sheets
-
-• Notify my team in Slack that the report is ready
-
-Analysis focuses on: Post titles, upvotes, comments, trending keywords"
-            rows={4}
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            className="border-border/80 bg-background/50 focus-visible:ring-ring focus-visible:ring-offset-background resize-none text-base shadow-inner focus-visible:ring-2 focus-visible:ring-offset-2"
-          />
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              placeholder=""
+              rows={4}
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              onFocus={handleFocus}
+              onClick={handleClick}
+              className="border-border/80 bg-background/50 focus-visible:ring-ring focus-visible:ring-offset-background resize-none text-base shadow-inner focus-visible:ring-2 focus-visible:ring-offset-2"
+            />
+            {showAnimatedPlaceholder && !prompt && (
+              <div
+                className="text-muted-foreground pointer-events-none absolute inset-0 overflow-hidden p-3 text-left text-base whitespace-pre-wrap"
+                onClick={handleClick}
+              >
+                {animatedText}
+                <span className="animate-pulse">|</span>
+              </div>
+            )}
+          </div>
           <div className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button
               onClick={onInspireMe}

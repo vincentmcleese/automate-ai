@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth/context'
 import { Toaster } from '@/components/ui/sonner'
@@ -18,6 +19,13 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+const chunkoBold = localFont({
+  src: '../assets/fonts/chunko-bold.ttf',
+  variable: '--font-chunko-bold',
+  weight: '700',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'AutomateAI - Intelligent Automation Platform',
   description: 'Streamline your workflow with AI-powered automation tools',
@@ -30,7 +38,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${chunkoBold.variable} antialiased`}
+      >
         <ErrorBoundary>
           <AuthProvider>
             <div className="min-h-screen">

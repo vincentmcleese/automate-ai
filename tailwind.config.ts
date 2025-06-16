@@ -18,6 +18,9 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        chunko: ['var(--font-chunko-bold)', 'sans-serif'],
+      },
       colors: {
         border: 'var(--border)',
         input: 'var(--input)',

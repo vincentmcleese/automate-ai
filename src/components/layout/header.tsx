@@ -18,11 +18,11 @@ export function Header() {
               className="h-8 w-8"
               priority
             />
-            <span className="text-xl font-bold">
-              Ghost{' '}
+            <span className="font-chunko text-xl tracking-wider">
               <span className="from-primary bg-gradient-to-r to-teal-400 bg-clip-text text-transparent">
-                Flows
+                GHOST
               </span>
+              TEAM
             </span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">

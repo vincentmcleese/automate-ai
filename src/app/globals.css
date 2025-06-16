@@ -127,3 +127,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Debug: Test if font loads */
+.font-chunko {
+  font-family: var(--font-chunko-bold), 'Arial Black', sans-serif !important;
+  font-weight: 700 !important;
+}
