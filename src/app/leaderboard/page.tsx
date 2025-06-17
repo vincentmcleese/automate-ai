@@ -3,6 +3,9 @@ import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { Suspense } from 'react'
 
+// Force dynamic rendering for this page since it fetches live data
+export const dynamic = 'force-dynamic'
+
 type LeaderboardEntry = {
   user_id: string
   name: string
@@ -12,12 +15,14 @@ type LeaderboardEntry = {
 
 async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/leaderboard`,
-      {
-        cache: 'no-store', // Always fetch fresh data for leaderboard
-      }
-    )
+    // Use absolute URL for production, relative for development
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+    const response = await fetch(`${baseUrl}/api/leaderboard`, {
+      cache: 'no-store', // Always fetch fresh data for leaderboard
+    })
 
     if (!response.ok) {
       console.error('Failed to fetch leaderboard:', response.status)

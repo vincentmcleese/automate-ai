@@ -84,25 +84,41 @@ export async function GET(request: NextRequest) {
     // })
 
     // Format the response using data from the automations table
-    const formattedAutomations =
-      automations?.map((automation: RawAutomation & { rank?: number }) => ({
-        id: automation.id,
-        title: automation.title || 'Untitled Automation',
-        description: automation.description || automation.user_input?.substring(0, 150) + '...',
-        slug: automation.slug,
-        created_at: automation.created_at,
-        updated_at: automation.updated_at,
-        status: automation.status,
-        image_url: automation.image_url,
-        tags: automation.tags,
-        user: {
-          id: automation.user_id,
-          email: automation.user_email,
-          name: automation.user_name || 'Anonymous',
-          avatar_url: automation.user_avatar_url,
-          rank: null, // Temporarily disable ranks until RPC function is available
-        },
-      })) || []
+    const formattedAutomations = await Promise.all(
+      (automations || []).map(async (automation: RawAutomation & { rank?: number }) => {
+        // Fetch user rank for each automation
+        let userRank: number | null = null
+        try {
+          const { data: rankData, error: rankError } = await supabase.rpc('get_user_rank', {
+            p_user_id: automation.user_id,
+          })
+          if (!rankError && rankData && rankData.length > 0) {
+            userRank = rankData[0].rank
+          }
+        } catch (error) {
+          console.error('Error fetching user rank:', error)
+        }
+
+        return {
+          id: automation.id,
+          title: automation.title || 'Untitled Automation',
+          description: automation.description || automation.user_input?.substring(0, 150) + '...',
+          slug: automation.slug,
+          created_at: automation.created_at,
+          updated_at: automation.updated_at,
+          status: automation.status,
+          image_url: automation.image_url,
+          tags: automation.tags,
+          user: {
+            id: automation.user_id,
+            email: automation.user_email,
+            name: automation.user_name || 'Anonymous',
+            avatar_url: automation.user_avatar_url,
+            rank: userRank,
+          },
+        }
+      })
+    )
 
     return NextResponse.json({
       automations: formattedAutomations,
