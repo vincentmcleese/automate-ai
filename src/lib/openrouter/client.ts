@@ -26,6 +26,7 @@ interface ChatCompletionResponse {
     message?: {
       content: string | null
     }
+    finish_reason?: string
   }>
 }
 
@@ -63,7 +64,7 @@ export class OpenRouterClient {
           model,
           messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' },
-          max_tokens: max_tokens || 2048, // Default to 2048 if not provided
+          max_tokens: max_tokens || 8192, // Default to 8192 for better response completeness
         }),
       })
 
@@ -73,10 +74,19 @@ export class OpenRouterClient {
       }
 
       const data: ChatCompletionResponse = await response.json()
-      const content = data.choices[0]?.message?.content
+      const choice = data.choices[0]
+      const content = choice?.message?.content
       if (!content) {
         throw new Error('Received empty content from OpenRouter API.')
       }
+
+      // Check if response was truncated due to token limit
+      if (choice?.finish_reason === 'length') {
+        console.warn(
+          `Response truncated due to token limit for model ${model}. Consider increasing max_tokens.`
+        )
+      }
+
       return content
     } catch (error) {
       console.error(`Error calling OpenRouter with model ${model}:`, error)
@@ -165,7 +175,7 @@ export class OpenRouterClient {
     model: string,
     options: { temperature?: number; max_tokens?: number } = {}
   ): Promise<string> {
-    const { temperature = 0.7, max_tokens = 1000 } = options
+    const { temperature = 0.7, max_tokens = 8192 } = options
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -189,10 +199,19 @@ export class OpenRouterClient {
       }
 
       const data: ChatCompletionResponse = await response.json()
-      const content = data.choices[0]?.message?.content
+      const choice = data.choices[0]
+      const content = choice?.message?.content
       if (!content) {
         throw new Error('Received empty content from OpenRouter API.')
       }
+
+      // Check if response was truncated due to token limit
+      if (choice?.finish_reason === 'length') {
+        console.warn(
+          `Response truncated due to token limit for model ${model}. Consider increasing max_tokens.`
+        )
+      }
+
       return content
     } catch (error) {
       console.error(`Error calling OpenRouter with model ${model}:`, error)

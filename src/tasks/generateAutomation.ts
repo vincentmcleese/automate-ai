@@ -82,7 +82,7 @@ async function generateMetadata(
   }
 
   const model = promptInfo.modelId || 'mistralai/mistral-7b-instruct:free'
-  return (await openRouterClient.generateJson(prompt, model)) as AutomationMetadata
+  return (await openRouterClient.generateJson(prompt, model, 4096)) as AutomationMetadata
 }
 
 // Generates the workflow by calling the 'json_generation' prompt
