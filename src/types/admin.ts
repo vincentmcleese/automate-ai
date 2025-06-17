@@ -225,6 +225,7 @@ export interface Automation {
   created_at: string
   updated_at: string
   error_message?: string | null
+  automation_guide?: string | null
   user_name?: string
   user_avatar_url?: string | null
   tools?: Tool[]

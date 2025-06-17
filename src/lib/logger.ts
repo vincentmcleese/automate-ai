@@ -8,14 +8,14 @@ type LogLevel = 'error' | 'warn' | 'info' | 'debug'
 interface LogEntry {
   level: LogLevel
   message: string
-  data?: any
+  data?: unknown
   timestamp: Date
 }
 
 class Logger {
   private isDevelopment = process.env.NODE_ENV === 'development'
 
-  private log(level: LogLevel, message: string, data?: any) {
+  private log(level: LogLevel, message: string, data?: unknown) {
     const entry: LogEntry = {
       level,
       message,
@@ -52,24 +52,24 @@ class Logger {
     }
   }
 
-  error(message: string, data?: any) {
+  error(message: string, data?: unknown) {
     this.log('error', message, data)
   }
 
-  warn(message: string, data?: any) {
+  warn(message: string, data?: unknown) {
     this.log('warn', message, data)
   }
 
-  info(message: string, data?: any) {
+  info(message: string, data?: unknown) {
     this.log('info', message, data)
   }
 
-  debug(message: string, data?: any) {
+  debug(message: string, data?: unknown) {
     this.log('debug', message, data)
   }
 
   // Convenience method for API errors
-  apiError(endpoint: string, error: any, context?: any) {
+  apiError(endpoint: string, error: unknown, context?: unknown) {
     this.error(`API Error in ${endpoint}`, {
       error: error instanceof Error ? error.message : error,
       stack: error instanceof Error ? error.stack : undefined,
@@ -78,12 +78,12 @@ class Logger {
   }
 
   // Convenience method for authentication errors
-  authError(message: string, context?: any) {
+  authError(message: string, context?: unknown) {
     this.error(`Auth Error: ${message}`, context)
   }
 
   // Convenience method for database errors
-  dbError(operation: string, error: any, context?: any) {
+  dbError(operation: string, error: unknown, context?: unknown) {
     this.error(`Database Error in ${operation}`, {
       error: error instanceof Error ? error.message : error,
       context,

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { getOpenRouterClient } from '@/lib/openrouter/client'
 import { generateSlug } from '@/lib/utils/slugify'
@@ -242,11 +242,80 @@ export async function generateWorkflowInBackground(
     }
 
     console.log(`Workflow for automation ${automationId} completed successfully.`)
+
+    // Generate automation guide in the background
+    generateAutomationGuideInBackground(automationId).catch(console.error)
   } catch (error) {
     console.error(`Error generating workflow for automation ${automationId}:`, error)
     await supabase
       .from('automations')
       .update({ status: 'failed', error_message: 'Workflow generation failed.' })
       .eq('id', automationId)
+  }
+}
+
+/**
+ * Generates the automation guide in the background after successful JSON generation.
+ */
+export async function generateAutomationGuideInBackground(automationId: string) {
+  const supabase = await createClient()
+  const supabaseAdmin = createAdminClient()
+
+  try {
+    console.log(`Starting guide generation for automation ${automationId}`)
+
+    // Fetch the completed automation data
+    const { data: automation, error: fetchError } = await supabase
+      .from('automations')
+      .select('title, description, generated_json')
+      .eq('id', automationId)
+      .eq('status', 'completed')
+      .single()
+
+    if (fetchError || !automation) {
+      console.error(`Failed to fetch automation ${automationId} for guide generation:`, fetchError)
+      return
+    }
+
+    console.log(
+      `Found automation: "${automation.title}" with JSON length: ${JSON.stringify(automation.generated_json).length}`
+    )
+
+    // Get the automation guide prompt using admin client
+    console.log('Attempting to fetch automation guide prompt...')
+    let guidePromptInfo
+    try {
+      guidePromptInfo = await getSystemPrompt(supabaseAdmin, 'automation_guide_generation')
+      console.log('Successfully fetched automation guide prompt:', guidePromptInfo.id)
+    } catch (promptError) {
+      console.error('Failed to fetch automation guide prompt:', promptError)
+      return
+    }
+
+    // Generate the automation guide
+    const automationGuide = await generateAutomationGuide(
+      supabase,
+      JSON.stringify(automation.generated_json, null, 2), // Pretty-formatted JSON
+      automation.title || 'Untitled Automation',
+      automation.description || 'No description provided',
+      guidePromptInfo
+    )
+
+    // Save the guide to the database
+    const { error: updateError } = await supabase
+      .from('automations')
+      .update({ automation_guide: automationGuide })
+      .eq('id', automationId)
+
+    if (updateError) {
+      console.error(`Failed to save automation guide for ${automationId}:`, updateError)
+      return
+    }
+
+    console.log(`Automation guide for ${automationId} generated successfully.`)
+  } catch (error) {
+    console.error(`Error generating automation guide for ${automationId}:`, error)
+    // Note: We don't update the automation status to 'failed' for guide generation
+    // since the main automation JSON generation was successful
   }
 }

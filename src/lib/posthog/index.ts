@@ -3,14 +3,14 @@ import posthog from 'posthog-js'
 // Utility functions for PostHog tracking
 export const analytics = {
   // Track custom events
-  track: (eventName: string, properties?: Record<string, any>) => {
+  track: (eventName: string, properties?: Record<string, unknown>) => {
     if (typeof window !== 'undefined') {
       posthog.capture(eventName, properties)
     }
   },
 
   // Identify users (call after authentication)
-  identify: (userId: string, properties?: Record<string, any>) => {
+  identify: (userId: string, properties?: Record<string, unknown>) => {
     if (typeof window !== 'undefined') {
       posthog.identify(userId, properties)
     }
@@ -24,7 +24,7 @@ export const analytics = {
   },
 
   // Set user properties
-  setUserProperties: (properties: Record<string, any>) => {
+  setUserProperties: (properties: Record<string, unknown>) => {
     if (typeof window !== 'undefined') {
       posthog.setPersonProperties(properties)
     }

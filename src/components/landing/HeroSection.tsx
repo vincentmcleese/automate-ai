@@ -8,6 +8,14 @@ import Image from 'next/image'
 import { ProcessSteps } from './ProcessSteps'
 import { useState, useEffect, useRef } from 'react'
 
+const ANIMATION_STEPS = [
+  '1. Fetch top posts from r/marketing about AI',
+  '2. Get OpenAI to analyze trending topics',
+  '3. Then generate 5 LinkedIn post copy variations based on trends',
+  '4. Save the analysis results to Google Sheets',
+  '5. Notify my team in Slack that the top is ready',
+]
+
 interface HeroSectionProps {
   prompt: string
   setPrompt: (value: string) => void
@@ -29,14 +37,6 @@ export function HeroSection({
   const [animatedText, setAnimatedText] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const steps = [
-    '1. Fetch top posts from r/marketing about AI',
-    '2. Get OpenAI to analyze trending topics',
-    '3. Then generate 5 LinkedIn post copy variations based on trends',
-    '4. Save the analysis results to Google Sheets',
-    '5. Notify my team in Slack that the top is ready',
-  ]
-
   useEffect(() => {
     if (!showAnimatedPlaceholder || prompt) return
 
@@ -51,17 +51,17 @@ export function HeroSection({
         setAnimatedText(currentText)
         phase = 1
         setTimeout(typeText, 800)
-      } else if (phase === 1 && stepIndex < steps.length) {
+      } else if (phase === 1 && stepIndex < ANIMATION_STEPS.length) {
         // Add each step to the same line
         if (stepIndex === 0) {
-          currentText += steps[stepIndex]
+          currentText += ANIMATION_STEPS[stepIndex]
         } else {
-          currentText += '  ' + steps[stepIndex]
+          currentText += '  ' + ANIMATION_STEPS[stepIndex]
         }
         setAnimatedText(currentText)
         stepIndex++
         setTimeout(typeText, 1000)
-      } else if (phase === 1 && stepIndex >= steps.length) {
+      } else if (phase === 1 && stepIndex >= ANIMATION_STEPS.length) {
         // Move to analysis phase
         currentText += '\n\nAnalysis focuses on: Post titles, upvotes, comments, trending keywords'
         setAnimatedText(currentText)

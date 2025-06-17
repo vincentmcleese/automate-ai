@@ -29,7 +29,7 @@ export const createAutomationSchema = z.object({
     .min(10, 'User input must be at least 10 characters')
     .max(5000, 'User input too long'),
   selectedTools: z.record(z.string()).optional().default({}),
-  validationResult: z.any().optional(), // Can be strongly typed later
+  validationResult: z.unknown().optional(), // Can be strongly typed later
 })
 
 // Automation update schema
@@ -150,7 +150,7 @@ export function validateSearchParams(
 export function validateJsonBody<T>(
   body: unknown,
   schema: z.ZodSchema<T>
-): { success: true; data: T } | { success: false; error: string; details?: any } {
+): { success: true; data: T } | { success: false; error: string; details?: unknown } {
   try {
     const result = schema.parse(body)
     return { success: true, data: result }

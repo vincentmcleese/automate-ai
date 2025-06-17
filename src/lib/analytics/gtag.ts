@@ -1,7 +1,7 @@
 // Google Analytics utility functions for Next.js
 declare global {
   interface Window {
-    gtag: (...args: any[]) => void
+    gtag: (command: string, targetId: string, config?: Record<string, unknown>) => void
   }
 }
 
@@ -21,7 +21,7 @@ interface GAEventParams {
   event_category?: string
   event_label?: string
   value?: number
-  custom_parameters?: Record<string, any>
+  custom_parameters?: Record<string, string | number | boolean>
 }
 
 // Track custom events
@@ -57,7 +57,7 @@ export const trackConversion = (conversionId: string, value?: number) => {
 }
 
 // Set user properties
-export const setUserProperties = (properties: Record<string, any>) => {
+export const setUserProperties = (properties: Record<string, string | number | boolean>) => {
   if (typeof window !== 'undefined' && window.gtag) {
     window.gtag('config', process.env.NEXT_PUBLIC_GA_ID!, {
       custom_map: properties,

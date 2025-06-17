@@ -6,21 +6,23 @@ import type { User } from '@supabase/supabase-js'
 /**
  * Standard API error response with consistent format
  */
-export function createErrorResponse(message: string, status: number, details?: any) {
-  return NextResponse.json(
-    {
-      error: message,
-      timestamp: new Date().toISOString(),
-      ...(process.env.NODE_ENV === 'development' && details && { details }),
-    },
-    { status }
-  )
+export function createErrorResponse(message: string, status: number, details?: unknown) {
+  const response = {
+    error: message,
+    timestamp: new Date().toISOString(),
+  }
+
+  if (process.env.NODE_ENV === 'development' && details) {
+    ;(response as { details?: unknown }).details = details
+  }
+
+  return NextResponse.json(response, { status })
 }
 
 /**
  * Standard API success response with consistent format
  */
-export function createSuccessResponse(data: any, status = 200) {
+export function createSuccessResponse(data: Record<string, unknown>, status = 200) {
   return NextResponse.json(
     {
       ...data,
