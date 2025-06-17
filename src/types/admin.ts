@@ -3,6 +3,7 @@ export type PromptCategory =
   | 'json_generation'
   | 'workflow_analysis'
   | 'image_generation'
+  | 'automation_guide'
   | 'custom'
 
 export interface SystemPrompt {

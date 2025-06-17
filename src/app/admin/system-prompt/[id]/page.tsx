@@ -198,6 +198,10 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
         return 'Used for generating structured JSON from validated workflows'
       case 'workflow_analysis':
         return 'Used for analyzing workflow complexity and requirements'
+      case 'image_generation':
+        return 'Used for generating image prompts and visual representations'
+      case 'automation_guide':
+        return 'Used for generating detailed setup guides for automation workflows'
       case 'custom':
         return 'Custom prompt for specialized use cases'
       default:
@@ -356,6 +360,22 @@ export default function SystemPromptEditPage({ params }: SystemPromptEditPagePro
                             <div className="font-medium">Workflow Analysis</div>
                             <div className="text-sm text-[#6b7280]">
                               {getCategoryDescription('workflow_analysis')}
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="image_generation">
+                          <div>
+                            <div className="font-medium">Image Generation</div>
+                            <div className="text-sm text-[#6b7280]">
+                              {getCategoryDescription('image_generation')}
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="automation_guide">
+                          <div>
+                            <div className="font-medium">Automation Guide</div>
+                            <div className="text-sm text-[#6b7280]">
+                              {getCategoryDescription('automation_guide')}
                             </div>
                           </div>
                         </SelectItem>

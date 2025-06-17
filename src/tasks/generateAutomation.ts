@@ -69,17 +69,20 @@ async function generateMetadata(
 ): Promise<AutomationMetadata> {
   const openRouterClient = getOpenRouterClient()
 
-  let prompt = promptInfo.content
-    .replace('{{user_input}}', userInput)
-    .replace('{{tools}}', tools.join(', ') || 'None')
+  // 1. System Prompt
+  let prompt = `# System Prompt\n\n${promptInfo.content}`
 
-  // Add training data to the prompt if it exists
+  // 2. Training Data
   if (promptInfo.trainingData && promptInfo.trainingData.length > 0) {
     const trainingSection = promptInfo.trainingData
       .map(data => `## ${data.title}\n\n${data.content}`)
       .join('\n\n')
-    prompt += `\n\n${trainingSection}`
+    prompt += `\n\n# Training Examples\n\n${trainingSection}`
   }
+
+  // 3. User Input
+  const inputData = `User Input: ${userInput}\nSelected Tools: ${tools.join(', ') || 'None'}`
+  prompt += `\n\n# Input\n\n${inputData}`
 
   const model = promptInfo.modelId || 'mistralai/mistral-7b-instruct:free'
   return (await openRouterClient.generateJson(prompt, model, 4096)) as AutomationMetadata
@@ -94,19 +97,51 @@ async function generateWorkflow(
 ): Promise<string> {
   const openRouterClient = getOpenRouterClient()
 
-  let finalPrompt = promptInfo.content
+  // 1. System Prompt
+  let finalPrompt = `# System Prompt\n\n${promptInfo.content}`
 
-  // Add training data to the prompt if it exists
+  // 2. Training Data
   if (promptInfo.trainingData && promptInfo.trainingData.length > 0) {
     const trainingSection = promptInfo.trainingData
       .map(data => `## ${data.title}\n\n${data.content}`)
       .join('\n\n')
-    finalPrompt += `\n\n${trainingSection}`
+    finalPrompt += `\n\n# Training Examples\n\n${trainingSection}`
   }
 
-  finalPrompt += `\n\nUser Input: ${userInput}\nSelected Tools: ${tools.join(', ') || 'None'}`
+  // 3. User Input
+  const inputData = `User Input: ${userInput}\nSelected Tools: ${tools.join(', ') || 'None'}`
+  finalPrompt += `\n\n# Input\n\n${inputData}`
 
   const model = promptInfo.modelId || 'openai/gpt-4o-mini'
+  return openRouterClient.generateText(finalPrompt, model, 8192)
+}
+
+// Generates automation guide by calling the 'automation_guide' prompt
+export async function generateAutomationGuide(
+  supabase: SupabaseClient,
+  automationJson: string,
+  automationTitle: string,
+  automationDescription: string,
+  promptInfo: SystemPromptInfo
+): Promise<string> {
+  const openRouterClient = getOpenRouterClient()
+
+  // 1. System Prompt
+  let finalPrompt = `# System Prompt\n\n${promptInfo.content}`
+
+  // 2. Training Data
+  if (promptInfo.trainingData && promptInfo.trainingData.length > 0) {
+    const trainingSection = promptInfo.trainingData
+      .map(data => `## ${data.title}\n\n${data.content}`)
+      .join('\n\n')
+    finalPrompt += `\n\n# Training Examples\n\n${trainingSection}`
+  }
+
+  // 3. User Input (Automation Data)
+  const inputData = `Automation Title: ${automationTitle}\n\nAutomation Description: ${automationDescription}\n\nAutomation JSON:\n\`\`\`json\n${automationJson}\n\`\`\``
+  finalPrompt += `\n\n# Input\n\n${inputData}`
+
+  const model = promptInfo.modelId || 'openai/gpt-4o'
   return openRouterClient.generateText(finalPrompt, model, 8192)
 }
 
