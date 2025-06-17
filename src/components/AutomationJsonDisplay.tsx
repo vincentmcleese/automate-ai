@@ -3,13 +3,32 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Copy, Download, CheckCircle, BookOpen } from 'lucide-react'
+import { Copy, Download, CheckCircle, BookOpen, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Automation } from '@/types/admin'
 
 interface AutomationJsonDisplayProps {
   automation: Automation
   showSuccessCard?: boolean
+}
+
+// Helper function to detect if JSON might be truncated
+function detectTruncation(jsonData: unknown): boolean {
+  if (!jsonData) return false
+
+  const jsonString = JSON.stringify(jsonData)
+
+  // Common signs of truncation in n8n workflows:
+  // 1. JSON ends abruptly without proper closing
+  // 2. Very large size (>30KB is suspicious for being cut off)
+  // 3. Last node/action seems incomplete
+  const isVeryLarge = jsonString.length > 30000
+  const hasImproperEnding =
+    jsonString.trim().endsWith(',') ||
+    jsonString.includes('...') ||
+    (!jsonString.trim().endsWith('}') && !jsonString.trim().endsWith(']'))
+
+  return isVeryLarge || hasImproperEnding
 }
 
 export function AutomationJsonDisplay({
@@ -52,8 +71,26 @@ export function AutomationJsonDisplay({
     }
   }
 
+  const isTruncated = detectTruncation(automation.generated_json)
+
   return (
     <div className="space-y-6">
+      {/* Truncation Warning */}
+      {isTruncated && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-amber-800">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Workflow May Be Incomplete</span>
+            </CardTitle>
+            <CardDescription className="text-amber-700">
+              This workflow appears to have been truncated due to context window limits. It may be
+              missing parts or incomplete. Please review carefully before use.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
       {/* Success Summary Card */}
       {showSuccessCard && (
         <Card className="border-green-200 bg-green-50">

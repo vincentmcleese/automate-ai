@@ -34,6 +34,12 @@ interface ModelsResponse {
   data: OpenRouterModel[]
 }
 
+// Internal type for API response with truncation status
+interface ApiResponse {
+  content: string
+  wasTruncated: boolean
+}
+
 export class OpenRouterClient {
   private apiKey: string
   private referer: string
@@ -50,7 +56,7 @@ export class OpenRouterClient {
    * A generic, private method to make a call to the OpenRouter chat completions API.
    * It enforces a JSON response format.
    */
-  private async callApi(prompt: string, model: string, max_tokens?: number): Promise<string> {
+  private async callApi(prompt: string, model: string, max_tokens?: number): Promise<ApiResponse> {
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -81,13 +87,14 @@ export class OpenRouterClient {
       }
 
       // Check if response was truncated due to token limit
-      if (choice?.finish_reason === 'length') {
+      const wasTruncated = choice?.finish_reason === 'length'
+      if (wasTruncated) {
         console.warn(
           `Response truncated due to token limit for model ${model}. Consider increasing max_tokens.`
         )
       }
 
-      return content
+      return { content, wasTruncated }
     } catch (error) {
       console.error(`Error calling OpenRouter with model ${model}:`, error)
       throw error // Re-throw after logging
@@ -146,28 +153,34 @@ export class OpenRouterClient {
   ): Promise<WorkflowValidationResult> {
     const model = 'anthropic/claude-3.5-sonnet'
     const fullPrompt = `${systemPrompt}\n\nWorkflow Description:\n"""${workflowDescription}"""`
-    const jsonContent = await this.callApi(fullPrompt, model)
-    return this._safeParseJson<WorkflowValidationResult>(jsonContent)
+    const response = await this.callApi(fullPrompt, model)
+    return this._safeParseJson<WorkflowValidationResult>(response.content)
   }
 
   /**
    * Public method for any generation task that requires a text output from the AI.
    * This is now used for the final workflow "JSON" which is treated as a raw string.
+   * Throws an error if the response was truncated due to token limits.
    */
   public async generateText(prompt: string, model: string, max_tokens?: number): Promise<string> {
-    const rawContent = await this.callApi(prompt, model, max_tokens)
-    if (!rawContent) {
+    const response = await this.callApi(prompt, model, max_tokens)
+    if (!response.content) {
       throw new Error('AI returned an empty response.')
     }
-    return rawContent
+    if (response.wasTruncated) {
+      throw new Error(
+        'The AI response was truncated due to context window limits. The generated workflow may be incomplete. Please try with a shorter description or contact support.'
+      )
+    }
+    return response.content
   }
 
   /**
    * Public method for generating structured metadata JSON.
    */
   public async generateJson(prompt: string, model: string, max_tokens?: number): Promise<unknown> {
-    const rawContent = await this.callApi(prompt, model, max_tokens)
-    return this._safeParseJson<unknown>(rawContent)
+    const response = await this.callApi(prompt, model, max_tokens)
+    return this._safeParseJson<unknown>(response.content)
   }
 
   public async complete(
@@ -254,11 +267,11 @@ export class OpenRouterClient {
 
   public async testModel(modelId: string): Promise<boolean> {
     try {
-      const content = await this.callApi(
+      const response = await this.callApi(
         'Respond with just the word "OK" if you can see this message.',
         modelId
       )
-      return content.toLowerCase().includes('ok')
+      return response.content.toLowerCase().includes('ok')
     } catch (error) {
       console.error(`Model test failed for ${modelId}:`, error)
       return false
