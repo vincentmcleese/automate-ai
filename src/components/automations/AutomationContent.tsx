@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Calendar, Download, Info, Share2, Copy } from 'lucide-react'
+import { ArrowLeft, Calendar, Download, Info, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import { Automation, Tool } from '@/types/admin'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,52 +11,16 @@ import { LeaderboardCreatorCard } from './LeaderboardCreatorCard'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { AnimatedLoading } from '../generate/AnimatedLoading'
+import { SetupGuide } from '../SetupGuide'
 
 export function AutomationContent({ automationId }: { automationId: string }) {
   const [automation, setAutomation] = useState<Automation | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const getCleanJson = () => {
-    if (!automation?.generated_json) return ''
-    let rawContent = ''
-    if (typeof automation.generated_json === 'string') {
-      rawContent = automation.generated_json
-    } else {
-      return JSON.stringify(automation.generated_json, null, 2)
-    }
-
-    try {
-      const jsonRegex = /```(json)?\s*([\s\S]*?)\s*```/
-      const match = rawContent.match(jsonRegex)
-
-      let jsonString = rawContent.trim()
-      if (match && match[2]) {
-        jsonString = match[2]
-      } else {
-        const firstBrace = jsonString.indexOf('{')
-        const lastBrace = jsonString.lastIndexOf('}')
-        if (firstBrace !== -1 && lastBrace > firstBrace) {
-          jsonString = jsonString.substring(firstBrace, lastBrace + 1)
-        }
-      }
-      const parsed = JSON.parse(jsonString)
-      return JSON.stringify(parsed, null, 2)
-    } catch {
-      return rawContent // Fallback to raw content if parsing fails
-    }
-  }
-
-  const copyJson = () => {
-    const jsonString = getCleanJson()
-    if (!jsonString) return
-    navigator.clipboard.writeText(jsonString)
-    toast.success('Content copied to clipboard!')
-  }
-
   const downloadJson = () => {
-    const content = getCleanJson()
-    if (!content) return
-    const blob = new Blob([content], { type: 'application/json' })
+    if (!automation?.generated_json) return
+    const jsonString = JSON.stringify(automation.generated_json, null, 2)
+    const blob = new Blob([jsonString], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -65,6 +29,7 @@ export function AutomationContent({ automationId }: { automationId: string }) {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+    toast.success('JSON downloaded successfully!')
   }
 
   // Polling logic
@@ -280,38 +245,30 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                 </CardContent>
               </Card>
 
-              {/* Workflow Steps Section */}
+              {/* Setup Guide Section */}
               <div>
-                <h2 className="mb-4 flex items-center space-x-2 text-lg font-semibold text-gray-800">
-                  <Copy className="h-5 w-5" />
-                  <span>Generated Workflow</span>
-                </h2>
-
-                {automation.status === 'completed' && automation.generated_json ? (
-                  <div className="space-y-4">
-                    <div className="max-h-[500px] overflow-auto rounded-md bg-gray-900 p-4 font-mono text-sm text-green-400">
-                      <pre>{getCleanJson()}</pre>
-                    </div>
-                    <Button onClick={copyJson} variant="outline" className="w-full sm:w-auto">
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy Content
-                    </Button>
-                  </div>
+                {automation.status === 'failed' ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center space-y-4 p-6 text-center text-gray-600">
+                      <div className="w-full text-left">
+                        <p className="font-semibold text-red-500">Automation Failed</p>
+                        {automation.error_message && (
+                          <pre className="text-muted-foreground mt-2 rounded-md bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap">
+                            {automation.error_message}
+                          </pre>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : automation.status === 'completed' ? (
+                  <SetupGuide
+                    automationGuide={automation.automation_guide || null}
+                    automationId={automation.id}
+                  />
                 ) : (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center space-y-4 p-6 text-center text-gray-600">
-                      {automation.status === 'failed' ? (
-                        <div className="w-full text-left">
-                          <p className="font-semibold text-red-500">Automation Failed</p>
-                          {automation.error_message && (
-                            <pre className="text-muted-foreground mt-2 rounded-md bg-gray-50 p-4 font-mono text-sm whitespace-pre-wrap">
-                              {automation.error_message}
-                            </pre>
-                          )}
-                        </div>
-                      ) : (
-                        <AnimatedLoading text="Generating automation..." />
-                      )}
+                      <AnimatedLoading text="Generating automation..." />
                     </CardContent>
                   </Card>
                 )}
