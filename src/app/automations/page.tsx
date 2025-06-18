@@ -32,44 +32,42 @@ export default function AutomationsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
-  const loadAutomations = useCallback(
-    async (isNewSearch: boolean) => {
-      try {
-        setLoading(true)
-        const url = debouncedSearchQuery
-          ? `/api/automations?search=${debouncedSearchQuery}&page=${page}&limit=12`
-          : `/api/automations?page=${page}&limit=12`
+  // Load automations function
+  const loadAutomations = useCallback(async () => {
+    try {
+      setLoading(true)
+      const url = debouncedSearchQuery
+        ? `/api/automations?search=${debouncedSearchQuery}&page=${page}&limit=12`
+        : `/api/automations?page=${page}&limit=12`
 
-        const response = await fetch(url)
+      const response = await fetch(url)
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch automations')
-        }
-
-        const data: AutomationsResponse = await response.json()
-        setAutomations(prev =>
-          isNewSearch || page === 1 ? data.automations : [...prev, ...data.automations]
-        )
-        setTotalPages(data.pagination.total_pages)
-      } catch (error) {
-        console.error('Error loading automations:', error)
-        toast.error('Failed to load automations')
-      } finally {
-        setLoading(false)
+      if (!response.ok) {
+        throw new Error('Failed to fetch automations')
       }
-    },
-    [debouncedSearchQuery, page]
-  )
 
+      const data: AutomationsResponse = await response.json()
+
+      // If it's page 1 or a new search, replace; otherwise append
+      setAutomations(prev => (page === 1 ? data.automations : [...prev, ...data.automations]))
+      setTotalPages(data.pagination.total_pages)
+    } catch (error) {
+      console.error('Error loading automations:', error)
+      toast.error('Failed to load automations')
+    } finally {
+      setLoading(false)
+    }
+  }, [debouncedSearchQuery, page])
+
+  // Load data when search query changes (reset to page 1)
   useEffect(() => {
-    // Reset page to 1 when search query changes
     setPage(1)
-    loadAutomations(true) // force reset of automations
-  }, [debouncedSearchQuery, loadAutomations])
+  }, [debouncedSearchQuery])
 
+  // Load data when page changes
   useEffect(() => {
-    loadAutomations(false)
-  }, [page, loadAutomations])
+    loadAutomations()
+  }, [loadAutomations])
 
   const handleCreateNew = () => {
     router.push('/generate-automation')
