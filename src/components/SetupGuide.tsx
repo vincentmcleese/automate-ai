@@ -2,20 +2,16 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   Clock,
   CheckCircle,
   Star,
   AlertTriangle,
-  Copy,
-  Download,
   Zap,
   Target,
   Wrench,
   ArrowRight,
 } from 'lucide-react'
-import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { AnimatedLoading } from './generate/AnimatedLoading'
 
@@ -46,7 +42,7 @@ const difficultyConfig = {
   hard: { color: 'bg-red-100 text-red-800 border-red-200', icon: '🔴' },
 }
 
-export function SetupGuide({ automationGuide, automationId }: SetupGuideProps) {
+export function SetupGuide({ automationGuide }: SetupGuideProps) {
   if (!automationGuide) {
     return (
       <Card>
@@ -72,34 +68,6 @@ export function SetupGuide({ automationGuide, automationId }: SetupGuideProps) {
     )
   }
 
-  const copyGuide = async () => {
-    try {
-      await navigator.clipboard.writeText(automationGuide)
-      toast.success('Setup guide copied to clipboard!')
-    } catch (error) {
-      console.error('Failed to copy:', error)
-      toast.error('Failed to copy to clipboard')
-    }
-  }
-
-  const downloadGuide = () => {
-    try {
-      const blob = new Blob([automationGuide], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `setup-guide-${automationId}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      toast.success('Setup guide downloaded!')
-    } catch (error) {
-      console.error('Failed to download:', error)
-      toast.error('Failed to download guide')
-    }
-  }
-
   const difficulty = guideData.difficulty || 'medium'
   const difficultyStyle = difficultyConfig[difficulty]
 
@@ -122,16 +90,6 @@ export function SetupGuide({ automationGuide, automationId }: SetupGuideProps) {
                   <CardTitle className="text-xl text-gray-900">How to Set It Up</CardTitle>
                   <p className="mt-1 text-sm text-gray-600">Step-by-step implementation guide</p>
                 </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" onClick={copyGuide}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </Button>
-                <Button variant="outline" size="sm" onClick={downloadGuide}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </Button>
               </div>
             </div>
           </CardHeader>
