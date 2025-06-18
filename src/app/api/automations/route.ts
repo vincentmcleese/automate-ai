@@ -28,15 +28,30 @@ export async function GET(request: NextRequest) {
     let count = null
 
     if (searchQuery) {
-      // Use the new search function
-      const { data: searchData, error: searchError } = await supabase.rpc('search_automations', {
-        search_term: searchQuery,
-        page_limit: limit,
-        page_offset: offset,
-      })
+      // Use text search with ilike instead of RPC function
+      const {
+        data: searchData,
+        error: searchError,
+        count: searchCount,
+      } = await supabase
+        .from('automations')
+        .select(
+          `
+          id, title, description, slug, user_input, status, created_at, updated_at,
+          user_id, user_name, user_email, user_avatar_url, image_url, tags
+          `,
+          { count: 'exact' }
+        )
+        .eq('status', 'completed')
+        .or(
+          `title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,user_input.ilike.%${searchQuery}%`
+        )
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
       automations = searchData
       error = searchError
-      // Note: count is not easily available with RPC, may need a separate count function if needed
+      count = searchCount
     } else {
       // Use direct query (RPC function not available)
       const {

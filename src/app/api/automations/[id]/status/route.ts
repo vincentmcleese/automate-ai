@@ -8,7 +8,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const { data, error } = await supabase
     .from('automations')
-    .select('status, generated_json')
+    .select('status, generated_json, automation_guide')
     .eq('id', id)
     .single()
 
@@ -20,5 +20,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     status: data.status,
     isComplete: data.status === 'completed' || data.status === 'failed',
     hasJson: !!data.generated_json,
+    hasGuide: !!data.automation_guide,
   })
 }

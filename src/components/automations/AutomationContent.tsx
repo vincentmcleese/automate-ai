@@ -17,6 +17,19 @@ export function AutomationContent({ automationId }: { automationId: string }) {
   const [automation, setAutomation] = useState<Automation | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const getProgressWidth = (status: string) => {
+    switch (status) {
+      case 'generating_workflow':
+        return '50%'
+      case 'generating_guide':
+        return '75%'
+      case 'completed':
+        return '100%'
+      default:
+        return '25%'
+    }
+  }
+
   const downloadJson = () => {
     if (!automation?.generated_json) return
     const jsonString = JSON.stringify(automation.generated_json, null, 2)
@@ -55,6 +68,9 @@ export function AutomationContent({ automationId }: { automationId: string }) {
           const finalData = await finalResponse.json()
           setAutomation(finalData)
           clearInterval(interval)
+        } else if (data.status !== automation.status) {
+          // Status changed but not completed - update the automation to show new status
+          setAutomation(prev => (prev ? { ...prev, status: data.status } : prev))
         }
       } catch (error) {
         console.error('Polling error:', error)
@@ -267,8 +283,65 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                   />
                 ) : (
                   <Card>
-                    <CardContent className="flex flex-col items-center justify-center space-y-4 p-6 text-center text-gray-600">
-                      <AnimatedLoading text="Generating automation..." />
+                    <CardContent className="flex flex-col items-center justify-center space-y-6 p-6 text-center text-gray-600">
+                      {/* Progress Steps */}
+                      <div className="w-full max-w-md space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <div
+                            className={`flex items-center space-x-2 ${
+                              ['generating_workflow', 'generating_guide', 'completed'].includes(
+                                automation.status
+                              )
+                                ? 'text-green-600'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            <div
+                              className={`h-2 w-2 rounded-full ${
+                                ['generating_workflow', 'generating_guide', 'completed'].includes(
+                                  automation.status
+                                )
+                                  ? 'bg-green-600'
+                                  : 'bg-gray-300'
+                              }`}
+                            />
+                            <span>Crafting automation</span>
+                          </div>
+                          <div
+                            className={`flex items-center space-x-2 ${
+                              ['generating_guide', 'completed'].includes(automation.status)
+                                ? 'text-green-600'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            <div
+                              className={`h-2 w-2 rounded-full ${
+                                ['generating_guide', 'completed'].includes(automation.status)
+                                  ? 'bg-green-600'
+                                  : 'bg-gray-300'
+                              }`}
+                            />
+                            <span>Compiling guide</span>
+                          </div>
+                        </div>
+                        <div className="h-1 w-full rounded-full bg-gray-200">
+                          <div
+                            className="h-1 rounded-full bg-green-600 transition-all duration-500"
+                            style={{ width: getProgressWidth(automation.status) }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Loading Message */}
+                      {automation.status === 'generating_workflow' && (
+                        <AnimatedLoading text="🤖 Crafting your automation..." />
+                      )}
+                      {automation.status === 'generating_guide' && (
+                        <AnimatedLoading text="📚 Compiling setup guide..." />
+                      )}
+                      {!automation.status.includes('generating') && (
+                        <AnimatedLoading text="Getting started..." />
+                      )}
                     </CardContent>
                   </Card>
                 )}

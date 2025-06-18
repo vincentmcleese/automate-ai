@@ -221,7 +221,13 @@ export interface Automation {
   generated_json: Record<string, unknown>
   title?: string | null
   description?: string | null
-  status: 'pending' | 'generating' | 'completed' | 'failed'
+  status:
+    | 'pending'
+    | 'generating'
+    | 'generating_workflow'
+    | 'generating_guide'
+    | 'completed'
+    | 'failed'
   created_at: string
   updated_at: string
   error_message?: string | null
@@ -284,7 +290,7 @@ export interface AutomationOverview {
   slug?: string
   created_at: string
   updated_at: string
-  status: 'generating' | 'completed' | 'failed'
+  status: 'generating' | 'generating_workflow' | 'generating_guide' | 'completed' | 'failed'
   image_url?: string
   user_name?: string
   user_email?: string

@@ -225,7 +225,7 @@ export async function generateWorkflowInBackground(
       .from('automations')
       .update({
         generated_json: generated_json_string,
-        status: 'completed',
+        status: 'generating_guide',
         prompt_id: workflowPromptInfo.id,
         prompt_version: workflowPromptInfo.version,
       })
@@ -293,18 +293,30 @@ export async function generateAutomationGuideInBackground(automationId: string) 
     }
 
     // Generate the automation guide
-    const automationGuide = await generateAutomationGuide(
-      supabase,
-      JSON.stringify(automation.generated_json, null, 2), // Pretty-formatted JSON
-      automation.title || 'Untitled Automation',
-      automation.description || 'No description provided',
-      guidePromptInfo
-    )
+    console.log('Starting automation guide generation...')
+    let automationGuide: string
+    try {
+      automationGuide = await generateAutomationGuide(
+        supabase,
+        JSON.stringify(automation.generated_json, null, 2), // Pretty-formatted JSON
+        automation.title || 'Untitled Automation',
+        automation.description || 'No description provided',
+        guidePromptInfo
+      )
+      console.log('Automation guide generated successfully, length:', automationGuide.length)
+    } catch (guideError) {
+      console.error('Error generating automation guide:', guideError)
+      // Continue execution - guide generation failure shouldn't break the process
+      return
+    }
 
     // Save the guide to the database
     const { error: updateError } = await supabase
       .from('automations')
-      .update({ automation_guide: automationGuide })
+      .update({
+        automation_guide: automationGuide,
+        status: 'completed',
+      })
       .eq('id', automationId)
 
     if (updateError) {
