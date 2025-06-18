@@ -113,7 +113,28 @@ async function generateWorkflow(
   finalPrompt += `\n\n# Input\n\n${inputData}`
 
   const model = promptInfo.modelId || 'openai/gpt-4o-mini'
-  return openRouterClient.generateText(finalPrompt, model, 8192)
+  const rawResponse = await openRouterClient.generateText(finalPrompt, model, 8192)
+
+  // Clean the response by removing markdown code block wrapper
+  let cleanedJson = rawResponse.trim()
+
+  // Remove markdown code block wrapper if present
+  if (cleanedJson.startsWith('```json')) {
+    cleanedJson = cleanedJson.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+  } else if (cleanedJson.startsWith('```')) {
+    cleanedJson = cleanedJson.replace(/^```\s*/, '').replace(/\s*```$/, '')
+  }
+
+  // Validate that it's proper JSON by parsing and re-stringifying
+  try {
+    const parsed = JSON.parse(cleanedJson)
+    return JSON.stringify(parsed, null, 2)
+  } catch (error) {
+    console.error('Failed to parse cleaned JSON:', error)
+    console.error('Cleaned JSON content:', cleanedJson.substring(0, 500) + '...')
+    // Return the cleaned content as-is if parsing fails
+    return cleanedJson
+  }
 }
 
 // Generates automation guide by calling the 'automation_guide' prompt
@@ -221,10 +242,13 @@ export async function generateWorkflowInBackground(
       getToolIds(supabase, uniqueToolNames),
     ])
 
+    // Parse the JSON string to store as proper JSONB
+    const jsonObject = JSON.parse(generated_json_string)
+
     const { error: updateError } = await supabase
       .from('automations')
       .update({
-        generated_json: generated_json_string,
+        generated_json: jsonObject,
         status: 'generating_guide',
         prompt_id: workflowPromptInfo.id,
         prompt_version: workflowPromptInfo.version,
@@ -264,12 +288,12 @@ export async function generateAutomationGuideInBackground(automationId: string) 
   try {
     console.log(`Starting guide generation for automation ${automationId}`)
 
-    // Fetch the completed automation data
+    // Fetch the automation data (should be in generating_guide status)
     const { data: automation, error: fetchError } = await supabase
       .from('automations')
       .select('title, description, generated_json')
       .eq('id', automationId)
-      .eq('status', 'completed')
+      .eq('status', 'generating_guide')
       .single()
 
     if (fetchError || !automation) {

@@ -131,7 +131,7 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                   variant="outline"
                   className="text-sm"
                   onClick={downloadJson}
-                  disabled={automation.status !== 'completed'}
+                  disabled={!automation.generated_json}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Download JSON
