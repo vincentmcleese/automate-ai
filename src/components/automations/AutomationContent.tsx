@@ -209,6 +209,12 @@ export function AutomationContent({ automationId }: { automationId: string }) {
                       <p className="text-sm text-gray-800">{automation.description}</p>
                     </div>
                   )}
+                  {automation.user_input && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-gray-600">User Prompt</p>
+                      <p className="text-sm text-gray-800">{automation.user_input}</p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 gap-4 border-t pt-4 md:grid-cols-2">
                     <div className="flex items-center space-x-3">
                       <Calendar className="h-5 w-5 text-gray-500" />
