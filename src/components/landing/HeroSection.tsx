@@ -47,7 +47,8 @@ export function HeroSection({
     const typeText = () => {
       if (phase === 0) {
         // Add title
-        currentText = 'e.g. "AI marketing" and create LinkedIn post copy\n'
+        currentText =
+          'e.g. \'Research trending "AI marketing" topics and create LinkedIn post copy\'\n'
         setAnimatedText(currentText)
         phase = 1
         setTimeout(typeText, 800)
