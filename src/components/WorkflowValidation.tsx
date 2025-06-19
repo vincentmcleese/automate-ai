@@ -278,7 +278,7 @@ export function WorkflowValidation({
             <div>
               <h4 className="mb-3 flex items-center font-semibold text-[#000000]">
                 <Lightbulb className="mr-2 h-4 w-4 text-yellow-500" />
-                Suggestions for Improvement
+                Suggestions for improvements (update prompt above)
               </h4>
               <div className="space-y-2">
                 {validation.suggestions.map((suggestion, index) => (
