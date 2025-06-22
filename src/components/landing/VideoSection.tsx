@@ -33,8 +33,8 @@ export function VideoSection() {
         </p>
       </div>
 
-      <div className="relative mx-auto max-w-4xl px-4">
-        <div className="relative aspect-video overflow-hidden rounded-xl bg-black shadow-2xl">
+      <div className="relative mx-auto max-w-2xl px-4">
+        <div className="relative aspect-square overflow-hidden rounded-xl bg-black shadow-2xl">
           <video
             ref={videoRef}
             className="h-full w-full object-contain"
