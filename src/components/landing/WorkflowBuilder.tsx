@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { CheckCircle, AlertTriangle, ChevronDown, RefreshCw } from 'lucide-react'
 import { inspirationalPrompts } from '@/lib/inspirational-prompts'
 import { KeyBenefitsSection } from '@/components/landing/KeyBenefitsSection'
+import { VideoSection } from '@/components/landing/VideoSection'
 
 type PageState = 'idle' | 'validating' | 'reviewing' | 'creating'
 
@@ -183,6 +184,7 @@ export function WorkflowBuilder() {
             buttonText="Analyze My Automation"
             onInspireMe={handleInspireMe}
           />
+          <VideoSection />
           <KeyBenefitsSection />
         </>
       )}
