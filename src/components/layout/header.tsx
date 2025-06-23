@@ -40,7 +40,7 @@ export function Header() {
         <div className="hidden flex-1 justify-center md:flex">
           <nav className="flex items-center space-x-6 text-sm font-medium">
             <Link
-              href="/#how-it-works"
+              href="/?showVideo=true"
               className="hover:text-foreground/80 text-foreground/60 transition-colors"
             >
               How it works
@@ -103,7 +103,7 @@ export function Header() {
         <div className="bg-background/95 border-t backdrop-blur md:hidden">
           <nav className="container mx-auto flex flex-col space-y-4 px-4 py-4">
             <Link
-              href="/#how-it-works"
+              href="/?showVideo=true"
               className="hover:text-foreground/80 text-foreground/60 text-base font-medium transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >

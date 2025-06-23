@@ -30,11 +30,18 @@ export const metadata: Metadata = {
   },
 }
 
-export default function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ showVideo?: string }>
+}) {
+  const params = await searchParams
+  const autoOpenVideo = params?.showVideo === 'true'
+
   return (
     <div className="relative min-h-screen">
       <div className="animate-background-glow bg-background absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(ellipse_100%_100%_at_50%_-20%,rgba(50,218,148,0.15),transparent_70%)]"></div>
-      <FloatingVideoPlayer />
+      <FloatingVideoPlayer autoOpen={autoOpenVideo} />
       <main className="container mx-auto max-w-4xl px-4 py-8 sm:py-16">
         <WorkflowBuilder />
       </main>

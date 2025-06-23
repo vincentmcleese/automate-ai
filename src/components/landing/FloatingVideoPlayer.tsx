@@ -1,13 +1,17 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Play, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 
-export function FloatingVideoPlayer() {
-  const [isOpen, setIsOpen] = useState(false)
+interface FloatingVideoPlayerProps {
+  autoOpen?: boolean
+}
+
+export function FloatingVideoPlayer({ autoOpen = false }: FloatingVideoPlayerProps) {
+  const [isOpen, setIsOpen] = useState(autoOpen)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -34,6 +38,12 @@ export function FloatingVideoPlayer() {
       setIsPlaying(false)
     }
   }
+
+  useEffect(() => {
+    if (autoOpen) {
+      setIsOpen(true)
+    }
+  }, [autoOpen])
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
