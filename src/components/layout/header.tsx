@@ -6,6 +6,7 @@ import { UserMenu } from '@/components/auth/user-menu'
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import CallToActionButton from '@/components/ui/CallToActionButton'
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -75,8 +76,11 @@ export function Header() {
           </nav>
         </div>
 
-        {/* Right side - UserMenu and Mobile Menu Button */}
-        <div className="flex items-center justify-end space-x-2">
+        {/* Right side - CTA, UserMenu and Mobile Menu Button */}
+        <div className="flex items-center justify-end space-x-3">
+          <div className="hidden md:block">
+            <CallToActionButton />
+          </div>
           <div className="hidden md:block">
             <UserMenu />
           </div>
@@ -136,7 +140,8 @@ export function Header() {
               </svg>
               Join Discord
             </a>
-            <div className="border-t pt-2">
+            <div className="space-y-3 border-t pt-4">
+              <CallToActionButton />
               <UserMenu />
             </div>
           </nav>

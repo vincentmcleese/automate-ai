@@ -1,4 +1,5 @@
 import { WorkflowBuilder } from '@/components/landing/WorkflowBuilder'
+import { FloatingVideoPlayer } from '@/components/landing/FloatingVideoPlayer'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function HomePage() {
   return (
     <div className="relative min-h-screen">
       <div className="animate-background-glow bg-background absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(ellipse_100%_100%_at_50%_-20%,rgba(50,218,148,0.15),transparent_70%)]"></div>
+      <FloatingVideoPlayer />
       <main className="container mx-auto max-w-4xl px-4 py-8 sm:py-16">
         <WorkflowBuilder />
       </main>
